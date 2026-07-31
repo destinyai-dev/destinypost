@@ -21,3 +21,5 @@ dist
 .git
 .github
 reports
+deployment/self-hosted/*
+!deployment/self-hosted/container-entrypoint.sh
