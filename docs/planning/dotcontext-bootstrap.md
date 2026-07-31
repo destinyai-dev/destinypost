@@ -1,4 +1,4 @@
-# Bootstrap: Ativar dotcontext no Robô MultiPost
+# Bootstrap: Ativar dotcontext no DestinyPost
 
 > **Como usar este arquivo:** execute as fases em ordem. Diferente do bootstrap
 > de `CLAUDE.md`, este aqui tem partes que rodam no terminal (instalação MCP) e
@@ -41,7 +41,7 @@
 
 - Node.js 20+ instalado.
 - Claude Code v2.x rodando com permissão para configurar MCP.
-- Repo `robo-multipost` em estado limpo (commitar pendências antes).
+- Repo `destinypost` em estado limpo (commitar pendências antes).
 - Branch dedicada para preencher skills:
   `chore/dotcontext-fill-skills` (ou continuação da
   `claude/activate-dotcontext-mcp-KFniE`).
@@ -199,7 +199,7 @@ Use o gateway "skill" do dotcontext.
 
 1. Action "list": confirme os 10 skills e seus status.
 2. Para cada skill com status unfilled, use action "fill" passando contexto
-   específico do Robô MultiPost:
+   específico do DestinyPost:
 
    Stack: NestJS + TypeScript backend, Next.js 14 + React + SWR + Tailwind
    frontend, Temporal.io orchestrator, Prisma + PostgreSQL, Mastra+MCP para

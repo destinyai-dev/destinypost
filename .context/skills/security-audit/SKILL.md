@@ -1,7 +1,7 @@
 ---
 type: skill
 name: Security Audit
-description: Audit code or a diff for security risks specific to Robô MultiPost — OAuth credential handling, AI provider key safety, SSRF in web search/extract, AGPL compliance, encryption-at-rest, rate limits, and prompt injection in agent flows. Use when reviewing auth/integrations changes, before a release, or after a CVE in an upstream dep.
+description: Audit code or a diff for security risks specific to DestinyPost — OAuth credential handling, AI provider key safety, SSRF in web search/extract, AGPL compliance, encryption-at-rest, rate limits, and prompt injection in agent flows. Use when reviewing auth/integrations changes, before a release, or after a CVE in an upstream dep.
 skillSlug: security-audit
 phases: [R, V]
 generated: 2026-02-20

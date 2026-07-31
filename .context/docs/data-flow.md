@@ -76,7 +76,7 @@ Modules collaborate via:
   |------|----------|------|-------------|
   | List profiles | `GET /integrations/late/profiles` | Bearer API key | Lists Late profiles via SDK |
   | List accounts | `GET /integrations/late/accounts` | Bearer API key | Lists accounts in a Late profile via SDK |
-  | Connect account | `POST /integrations/late/connect-account` | Bearer API key | Registers a Late account as a Multipost integration |
+  | Connect account | `POST /integrations/late/connect-account` | Bearer API key | Registers a Late account as a DestinyPost integration |
   | Platform invite | `POST /integrations/late/invite-link` | Bearer API key | Generates OAuth invite link via undocumented `POST https://getlate.dev/api/v1/platform-invites` (direct HTTP, not SDK) |
   | New account URL | `GET /integrations/late/new-account-url` | Bearer API key | Gets OAuth URL via Late SDK `connect.getConnectUrl()` |
 

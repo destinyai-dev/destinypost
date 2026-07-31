@@ -8,7 +8,7 @@
 
 ## Contexto
 
-O Postiz original foi construido como SaaS com planos pagos (FREE, STANDARD, TEAM, PRO, ULTIMATE). Cada plano define limites de creditos para geracao de imagens (`image_generation_count`) e videos (`generate_videos`). No modelo self-hosted do Robo MultiPost, esse sistema de creditos impede o uso de IA mesmo com as API keys configuradas.
+O Postiz original foi construido como SaaS com planos pagos (FREE, STANDARD, TEAM, PRO, ULTIMATE). Cada plano define limites de creditos para geracao de imagens (`image_generation_count`) e videos (`generate_videos`). No modelo self-hosted do DestinyPost, esse sistema de creditos impede o uso de IA mesmo com as API keys configuradas.
 
 ### Problema Atual
 
@@ -36,7 +36,7 @@ O Postiz original foi construido como SaaS com planos pagos (FREE, STANDARD, TEA
 
 ### Caso 1: Self-Hosted Pessoal (Ilimitado)
 
-> "Eu instalei o Robo MultiPost para minha agencia. Quero que todos os perfis/workspaces tenham acesso ilimitado a IA. Nao quero me preocupar com creditos."
+> "Eu instalei o DestinyPost para minha agencia. Quero que todos os perfis/workspaces tenham acesso ilimitado a IA. Nao quero me preocupar com creditos."
 
 - **Comportamento esperado:** Todos os workspaces e perfis geram imagens/videos sem limite
 - **Configuracao:** Uma variavel de ambiente ou flag global
@@ -44,7 +44,7 @@ O Postiz original foi construido como SaaS com planos pagos (FREE, STANDARD, TEA
 
 ### Caso 2: SaaS Multi-Tenant (Creditos Gerenciados)
 
-> "Eu oferto o Robo MultiPost como servico para meus clientes. Cada cliente tem um workspace. Quero definir quantas imagens e videos cada um pode gerar por mes."
+> "Eu oferto o DestinyPost como servico para meus clientes. Cada cliente tem um workspace. Quero definir quantas imagens e videos cada um pode gerar por mes."
 
 - **Comportamento esperado:** Creditos configurados por organizacao, controlados pelo admin
 - **Configuracao:** Painel administrativo com gestao por workspace

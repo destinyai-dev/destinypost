@@ -14,7 +14,7 @@ import { MessagingTokensSection } from '@gitroom/frontend/components/settings/me
 const PROVIDER = 'facebook';
 const SENTINEL = '__REDACTED__';
 const MASK = '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022';
-const DEFAULT_VERIFY_TOKEN = 'multipost';
+const DEFAULT_VERIFY_TOKEN = 'destinypost';
 
 type SectionId = 'facebook' | 'instagram' | 'threads';
 

@@ -64,7 +64,7 @@ describe('CredentialService', () => {
         clientSecret: SENTINEL,
         instagramAppId: 'ig-app',
         instagramAppSecret: 'ig-secret',
-        webhookVerifyToken: 'multipost',
+        webhookVerifyToken: 'destinypost',
         threadsAppId: '',
         threadsAppSecret: '',
       });
@@ -81,7 +81,7 @@ describe('CredentialService', () => {
       expect(merged.clientId).toBe('new-app-id');
       expect(merged.clientSecret).toBe('app-secret'); // SENTINEL -> existing
       expect(merged.instagramAppId).toBe('ig-app');
-      expect(merged.webhookVerifyToken).toBe('multipost');
+      expect(merged.webhookVerifyToken).toBe('destinypost');
 
       expect(repository.upsert).toHaveBeenCalledWith(
         'org-1',

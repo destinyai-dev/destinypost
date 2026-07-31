@@ -118,13 +118,13 @@ Decisões confirmadas no V1:
 
 ## Contexto e motivação
 
-Permitir que o Robo MultiPost **monitore automaticamente os stories publicados
+Permitir que o DestinyPost **monitore automaticamente os stories publicados
 diretamente no app do Instagram** (ou Creator Studio, Meta Business Suite, etc)
 e **reposte** o mesmo conteúdo em outras redes curtas/verticais (TikTok,
 YouTube Shorts, e outras no futuro).
 
-A postagem original **não sai do MultiPost** — o usuário continua publicando
-no Instagram pelo app como faz hoje. O MultiPost apenas observa, baixa a
+A postagem original **não sai do DestinyPost** — o usuário continua publicando
+no Instagram pelo app como faz hoje. O DestinyPost apenas observa, baixa a
 mídia do story e republica nos canais destino.
 
 Diferença vs features já documentadas:
@@ -160,9 +160,9 @@ Instagram para reduzir trabalho manual do criador de conteúdo.
 
 ## Pré-requisitos do usuário
 
-- Conta **Instagram Business** conectada no MultiPost (provider `instagram`
+- Conta **Instagram Business** conectada no DestinyPost (provider `instagram`
   ou `instagram-standalone`) com scope `instagram_basic`
-- Canal(is) de destino já conectado(s) no MultiPost (ex: TikTok, YouTube)
+- Canal(is) de destino já conectado(s) no DestinyPost (ex: TikTok, YouTube)
 - App Meta em Live Mode (para contas fora de Roles/Testers)
 
 > **Sem variável de ambiente global**. A feature respeita cada perfil: se o
@@ -543,7 +543,7 @@ aceito mas não ideal), Bluesky, Mastodon.
   centenas de regras por worker.
 - **Remoção do story no IG antes do download**: `fetch(media_url)` pode
   voltar 404. Log FAILED com `errorMessage=MEDIA_NOT_FOUND`.
-- **Conteúdo sensitivo/flagged**: o MultiPost não faz moderação própria.
+- **Conteúdo sensitivo/flagged**: o DestinyPost não faz moderação própria.
   Se o TikTok/YouTube rejeitar, o log fica com erro do provider.
 
 ## Compliance

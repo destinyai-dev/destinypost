@@ -24,8 +24,8 @@ type CommentItem = {
   user?: { email?: string | null; name?: string | null } | null;
 };
 
-const GUEST_NAME_KEY = 'robo-multipost:guest-name';
-const GUEST_EMAIL_KEY = 'robo-multipost:guest-email';
+const GUEST_NAME_KEY = 'destinypost:guest-name';
+const GUEST_EMAIL_KEY = 'destinypost:guest-email';
 
 function readGuestDefaults() {
   if (typeof window === 'undefined') return { name: '', email: '' };

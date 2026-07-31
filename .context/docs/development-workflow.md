@@ -15,7 +15,7 @@ O objetivo e manter separacao clara entre codigo upstream, customizacoes e relea
 
 | Remote     | URL                                              |
 |------------|--------------------------------------------------|
-| `origin`   | `https://github.com/maiconramos/robo-multipost`  |
+| `origin`   | `https://github.com/destinyai-dev/destinypost`  |
 | `upstream` | `https://github.com/gitroomhq/postiz-app`        |
 
 ## Fluxo Diario
@@ -50,7 +50,7 @@ git push origin vX.Y.Z
 ```
 
 O push da tag dispara GitHub Actions que builda e publica a imagem Docker em
-`ghcr.io/maiconramos/robo-multipost`.
+`ghcr.io/destinyai-dev/destinypost`.
 
 Use o skill `/release` no Claude Code para execucao guiada deste fluxo.
 

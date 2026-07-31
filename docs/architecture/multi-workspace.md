@@ -1,12 +1,12 @@
-# Dossie Tecnico: Arquitetura Multi-Workspace/Multi-Perfil para o Robo MultiPost
+# Dossie Tecnico: Arquitetura Multi-Workspace/Multi-Perfil para o DestinyPost
 
 ## Objetivo
 
-Este documento compila um estudo aprofundado de como 4 plataformas open-source consolidadas implementam multi-tenancy, multi-workspace e gestao de credenciais, mapeando para a realidade do Robo MultiPost. O objetivo e fornecer base tecnica completa para que um agente de IA (ou desenvolvedor) possa implementar o sistema de multi-perfil no MultiPost com seguranca e consistencia.
+Este documento compila um estudo aprofundado de como 4 plataformas open-source consolidadas implementam multi-tenancy, multi-workspace e gestao de credenciais, mapeando para a realidade do DestinyPost. O objetivo e fornecer base tecnica completa para que um agente de IA (ou desenvolvedor) possa implementar o sistema de multi-perfil no DestinyPost com seguranca e consistencia.
 
 ---
 
-## Modelo Proposto para o MultiPost
+## Modelo Proposto para o DestinyPost
 
 ```
 Workspace (agencia)
@@ -39,7 +39,7 @@ Exemplo concreto:
 
 ### Hierarquia de 3 niveis vs 2 niveis
 
-A maioria das plataformas usa **2 niveis** (Workspace > Resources). O MultiPost propoe **3 niveis** (Workspace > Profile > Resources) porque:
+A maioria das plataformas usa **2 niveis** (Workspace > Resources). O DestinyPost propoe **3 niveis** (Workspace > Profile > Resources) porque:
 
 1. **Caso de uso de agencia**: Uma agencia gerencia N clientes, cada um com suas proprias contas sociais, calendario e midias
 2. **Isolamento por cliente**: O cliente Nike nao deve ver posts da Adidas, mesmo estando na mesma agencia
@@ -48,7 +48,7 @@ A maioria das plataformas usa **2 niveis** (Workspace > Resources). O MultiPost 
 
 ---
 
-## 1. ESTADO ATUAL DO MULTIPOST (Postiz)
+## 1. ESTADO ATUAL DO DESTINYPOST (Postiz)
 
 ### Arquitetura Existente
 
@@ -350,14 +350,14 @@ current_account.inboxes.where(...)
 - Jobs carregam a account e fazem query scoped
 - **Sem middleware Sidekiq para auto-tenant switching**
 
-### Licoes para o MultiPost
+### Licoes para o DestinyPost
 
 1. **`account_id` em toda tabela** — pattern simples mas requer disciplina em cada query
 2. **JSONB para settings e features** — flexivel, mas mais dificil de validar
 3. **Scoping manual e mais seguro que default_scope** — evita bugs de escopo vazado
 4. **Canais polimorficos** — cada tipo de canal tem schema proprio (bom para credenciais diferentes)
 5. **Feature flags per-account** — otimo para tiers/planos diferenciados
-6. **Sem conceito de "perfil" dentro do account** — gap que o MultiPost pode preencher
+6. **Sem conceito de "perfil" dentro do account** — gap que o DestinyPost pode preencher
 
 ---
 
@@ -438,7 +438,7 @@ Instance (Super Admin)
 
 ### Credenciais e Data Sources — DESTAQUE
 
-**Este e o modelo mais relevante para o MultiPost em termos de credenciais isoladas.**
+**Este e o modelo mais relevante para o DestinyPost em termos de credenciais isoladas.**
 
 **Escopo de data source:**
 - Cada `DataSource` tem `organizationId` + `scope` (local vs global)
@@ -469,7 +469,7 @@ Instance (Super Admin)
 
 ### Patterns Tecnicos
 
-- **NestJS backend** (mesma stack do MultiPost!)
+- **NestJS backend** (mesma stack do DestinyPost!)
 - TypeORM como ORM
 - JWT com context de organizacao
 - Guards validam que usuario pertence a organizacao solicitada
@@ -477,7 +477,7 @@ Instance (Super Admin)
 - **BullMQ** para background jobs (migrou do Temporal)
 - Jobs carregam `organizationId` no payload
 
-### Licoes para o MultiPost
+### Licoes para o DestinyPost
 
 1. **SSO per-workspace** — modelo maduro para agencias com clientes que usam SSO diferentes
 2. **Credenciais per-environment** — util para dev/staging/prod
@@ -592,14 +592,14 @@ Quando um workflow executa:
 - Vaults podem ser **restritos a um projeto especifico**
 - Valor **nunca persiste** no banco do n8n
 
-### Licoes para o MultiPost
+### Licoes para o DestinyPost
 
-1. **AES-256-CBC com salt aleatorio** — ja e similar ao que o MultiPost usa (GCM e melhor)
+1. **AES-256-CBC com salt aleatorio** — ja e similar ao que o DestinyPost usa (GCM e melhor)
 2. **Redacao por campo** — padrao excelente para API que retorna credenciais ao frontend
 3. **External Secrets** — integracao com vaults externos e diferencial para enterprise
 4. **Permissao de credencial separada de permissao de workflow** — usuario pode usar sem ver
 5. **`N8N_ENCRYPTION_KEY` como unico segredo** — simplifica operacoes mas cria ponto unico de falha
-6. **Projects como boundary de autorizacao** — similar ao "Profile" proposto para o MultiPost
+6. **Projects como boundary de autorizacao** — similar ao "Profile" proposto para o DestinyPost
 
 ---
 
@@ -713,7 +713,7 @@ HTTP Request → Route: /mixpost/api/{workspaceUuid}/posts
         → Model queries usam workspace_id do contexto
 ```
 
-### Licoes para o MultiPost
+### Licoes para o DestinyPost
 
 1. **UUID para workspace** — melhor que integer IDs em URLs (seguranca, previsibilidade)
 2. **Contexto via rota, nao cookie** — mais RESTful e stateless que o `showorg` cookie do Postiz
@@ -735,7 +735,7 @@ HTTP Request → Route: /mixpost/api/{workspaceUuid}/posts
 | n8n | Single DB, application-scoped | Project membership | 2 (Project > Resources) |
 | Mixpost | Single DB, application-scoped | `workspace_id` | 2 (Workspace > Resources) |
 | **Postiz atual** | Single DB, application-scoped | `organizationId` | 2 (Org > Resources) |
-| **MultiPost proposto** | Single DB, application-scoped | `workspaceId` + `profileId` | **3 (Workspace > Profile > Resources)** |
+| **DestinyPost proposto** | Single DB, application-scoped | `workspaceId` + `profileId` | **3 (Workspace > Profile > Resources)** |
 
 ### Autenticacao e SSO
 
@@ -745,7 +745,7 @@ HTTP Request → Route: /mixpost/api/{workspaceUuid}/posts
 | ToolJet | Sim (JWT + guards) | **Sim, per-workspace** | N/A |
 | n8n | Sim (project membership) | Enterprise (SAML, OIDC) | N/A |
 | Mixpost | Sim (URL-based UUID) | Nao documentado | Nao |
-| **MultiPost** | Sim (cookie-based) | A implementar | **Sim (proposto)** |
+| **DestinyPost** | Sim (cookie-based) | A implementar | **Sim (proposto)** |
 
 ### Criptografia de Credenciais
 
@@ -769,7 +769,7 @@ HTTP Request → Route: /mixpost/api/{workspaceUuid}/posts
 
 ---
 
-## 7. RECOMENDACOES DE IMPLEMENTACAO PARA O MULTIPOST
+## 7. RECOMENDACOES DE IMPLEMENTACAO PARA O DESTINYPOST
 
 ### 7.1. Hierarquia de Dados Proposta
 
@@ -1109,7 +1109,7 @@ model AuditLog {
 - [Features](https://mixpost.app/features)
 - [Pro Release Notes](https://mixpost.app/releases/pro)
 
-### MultiPost/Postiz
+### DestinyPost/Postiz
 - Schema Prisma: `libraries/nestjs-libraries/src/database/prisma/schema.prisma`
 - Auth Middleware: `apps/backend/src/services/auth/auth.middleware.ts`
 - Org Selector: `apps/frontend/src/components/layout/organization.selector.tsx`

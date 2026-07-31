@@ -1,9 +1,9 @@
 ---
 name: fork-status
-description: Status rapido do fork Robo MultiPost. Mostra divergencia com upstream Postiz, commits pendentes, versao atual e prontidao para release. Use quando quiser saber o estado geral do fork.
+description: Status rapido do fork DestinyPost. Mostra divergencia com upstream Postiz, commits pendentes, versao atual e prontidao para release. Use quando quiser saber o estado geral do fork.
 ---
 
-# Fork Status — Robo MultiPost
+# Fork Status — DestinyPost
 
 Voce esta gerando um relatorio de status do fork. Execute os comandos abaixo e compile o resultado.
 
@@ -45,7 +45,7 @@ git describe --tags --abbrev=0 2>/dev/null || echo "Nenhuma tag encontrada"
 
 ### 6. Saude do CI/CD
 ```bash
-grep -c "maiconramos/robo-multipost" .github/workflows/build-containers.yml
+grep -c "destinyai-dev/destinypost" .github/workflows/build-containers.yml
 grep -c "gitroomhq" .github/workflows/build-containers.yml
 ```
 
@@ -59,7 +59,7 @@ test -f CHANGELOG.md && echo "CHANGELOG.md existe" || echo "CHANGELOG.md NAO exi
 Apresente os resultados neste formato:
 
 ```
-=== Robo MultiPost — Fork Status ===
+=== DestinyPost — Fork Status ===
 
 Branch atual:          <branch>
 Working tree:          limpo / N arquivos modificados
@@ -81,7 +81,7 @@ Nao incluidos em release:   N
   - ...
 
 --- Saude ---
-Registry CI/CD:        OK (maiconramos) / ERRO (gitroomhq)
+Registry CI/CD:        OK (destinyai-dev) / ERRO (gitroomhq)
 CHANGELOG.md:          Existe / Nao existe
 
 --- Prontidao para Release ---

@@ -1,4 +1,4 @@
-# API Pública do Robô MultiPost (referência para n8n / integrações)
+# API Pública do DestinyPost (referência para n8n / integrações)
 
 Referência geral da API pública — autenticação, canais, posts, upload, analytics e mais. Para **automações de comentário do Instagram**, veja [`public-flows-api.md`](public-flows-api.md).
 

@@ -8,7 +8,7 @@
 
 ## Contexto
 
-Hoje a IA do Robo MultiPost esta fragmentada em varios providers hardcoded:
+Hoje a IA do DestinyPost esta fragmentada em varios providers hardcoded:
 
 | Tipo | Provider Atual | Modelo | Env Var |
 |------|---------------|--------|---------|

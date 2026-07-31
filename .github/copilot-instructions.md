@@ -1,4 +1,4 @@
-# Copilot Coding Agent Instructions for Robô MultiPost
+# Copilot Coding Agent Instructions for DestinyPost
 
 Single source of truth: **[`CLAUDE.md`](../CLAUDE.md)** at the repo root, with
 per-area children (`apps/backend`, `apps/frontend`, `apps/orchestrator`,

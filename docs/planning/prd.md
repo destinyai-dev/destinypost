@@ -1,8 +1,8 @@
-# PRD — Robô MultiPost (Fork do Postiz)
+# PRD — DestinyPost (Fork do Postiz)
 
 ## 1) Visão Geral
 
-O **Robô MultiPost** é um scheduler de redes sociais self-hosted, baseado no projeto open-source **Postiz (AGPL-3.0)**, adaptado para a comunidade **Automação Sem Limites**.
+O **DestinyPost** é uma plataforma de redes sociais self-hosted, baseada no projeto open-source **Postiz (AGPL-3.0)** e desenvolvida pela **Destiny AI**.
 
 O objetivo é oferecer uma experiência pronta para uso em **VPS + Docker/Portainer**, com foco em:
 - Facilidade de instalação e onboarding
@@ -14,11 +14,11 @@ O objetivo é oferecer uma experiência pronta para uso em **VPS + Docker/Portai
 
 ## 2) Contexto e Motivação
 
-- Criar um produto escalável e rentável para os participantes da Comunidade Automação sem Limites
+- Criar um produto escalável e rentável para clientes da Destiny AI
 - O público-alvo já utiliza VPS (n8n + Portainer), então um stack Docker consistente tende a reduzir fricção real.
 - O Postiz já possui base madura (33 redes sociais, agendamento, API pública, CLI, SDK, webhooks, Temporal para jobs) e serve como motor confiável.
 - A infraestrutura de IA (Mastra framework, MCP, agentes) já está implementada no código — o trabalho é configurar e expor, não construir do zero.
-- Diferenciais do Robô MultiPost: **suporte ao Late** + **exposição da IA existente com providers da comunidade** + **memória por workspace** + **onboarding em pt-BR e stack simplificada**.
+- Diferenciais do DestinyPost: **suporte ao Late** + **exposição da IA existente com providers da comunidade** + **memória por workspace** + **onboarding em pt-BR e stack simplificada**.
 
 ## 3) Princípios de Desenvolvimento
 
@@ -41,7 +41,7 @@ Toda nova feature com interface de backend deve ser projetada como **contrato de
 ### Objetivo principal
 Entregar uma versão do Postiz adaptada para a comunidade, com:
 1. Português BR como padrão (demais idiomas mantidos — 17 idiomas já existem no código)
-2. Branding atualizado para Robô MultiPost
+2. Branding atualizado para DestinyPost
 3. Integração com [Late](https://docs.getlate.dev/llms-full.txt) como provedor opcional para TikTok e Pinterest
 4. Landing page e comunicação em pt-BR
 5. Decisões explícitas sobre features existentes (billing, marketplace, short links, storage)
@@ -117,7 +117,7 @@ O produto é um monorepo com 5 serviços obrigatórios em produção:
 
 ---
 
-### Fase 1 — Base do Produto (Robô MultiPost)
+### Fase 1 — Base do Produto (DestinyPost)
 
 #### 9.1 Português BR como padrão
 - O arquivo de tradução `pt` já existe no código — o trabalho é **revisar a qualidade**, não criar do zero
@@ -127,7 +127,7 @@ O produto é um monorepo com 5 serviços obrigatórios em produção:
 - **Document-first:** criar `docs/i18n.md` com instruções de como adicionar/alterar traduções
 
 #### 9.2 Branding e Identidade Visual
-- Substituir marca "Postiz" por "Robô MultiPost" no app:
+- Substituir marca "Postiz" por "DestinyPost" no app:
   - título, meta tags, textos e ícones
   - logotipo (onde aplicável)
   - e-mails/sistema (se houver)
@@ -200,7 +200,7 @@ As features abaixo já existem no código e precisam de uma **decisão explícit
 
 #### 9.6 README e Documentação
 - Atualizar `README.md` para:
-  - nome Robô MultiPost
+  - nome DestinyPost
   - instruções de instalação por Docker/Portainer (incluindo os 5 serviços obrigatórios)
   - requisitos mínimos de VPS (seguir orientações do Postiz)
   - variáveis de ambiente mínimas necessárias
@@ -317,7 +317,7 @@ A estratégia adotada é baseada no **GitLab Flow**, modelo recomendado para pro
 
 | Remote | URL |
 |---|---|
-| `origin` | `https://github.com/maiconramos/robo-multipost` |
+| `origin` | `https://github.com/destinyai-dev/destinypost` |
 | `upstream` | `https://github.com/gitroomhq/postiz-app` |
 
 ### Fluxo completo
@@ -412,7 +412,7 @@ git push origin v1.2.1
 
 ### Fase 1 (MVP)
 - App abre com pt-BR por padrão, demais idiomas disponíveis
-- Branding é Robô MultiPost (sem referências visuais principais a Postiz)
+- Branding é DestinyPost (sem referências visuais principais a Postiz)
 - Landing page em pt-BR
 - README atualizado com instalação/upgrade e os 5 serviços obrigatórios
 - Late provider configurável e funcional para TikTok e Pinterest
@@ -451,6 +451,5 @@ git push origin v1.2.1
 | Feature sem documentação | Regra de PR: document-first obrigatório antes de merge |
 | Contrato de API quebrado | Regra de PR: api-first obrigatório — mudanças de contrato versionadas |
 | Infraestrutura de IA existente acoplada ao OpenAI | Fase 3 substitui dependência fixa por configuração por workspace |
-
 
 

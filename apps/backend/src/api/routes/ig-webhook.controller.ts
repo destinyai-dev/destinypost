@@ -18,7 +18,8 @@ import { IntegrationService } from '@gitroom/nestjs-libraries/database/prisma/in
 import { CredentialService } from '@gitroom/nestjs-libraries/database/prisma/credentials/credential.service';
 import * as crypto from 'crypto';
 
-const DEFAULT_IG_WEBHOOK_VERIFY_TOKEN = 'multipost';
+const DEFAULT_IG_WEBHOOK_VERIFY_TOKEN = 'destinypost';
+const LEGACY_IG_WEBHOOK_VERIFY_TOKEN = 'multipost';
 
 // Limite de entries processadas por requisicao. A Meta entrega lotes pequenos
 // (tipicamente 1). O teto evita que uma requisicao NAO autenticada com um array
@@ -57,7 +58,10 @@ export class IgWebhookController {
     }
 
     // 1) Accept platform default token (zero-config)
-    if (token === DEFAULT_IG_WEBHOOK_VERIFY_TOKEN) {
+    if (
+      token === DEFAULT_IG_WEBHOOK_VERIFY_TOKEN ||
+      token === LEGACY_IG_WEBHOOK_VERIFY_TOKEN
+    ) {
       return res.status(200).send(challenge);
     }
 

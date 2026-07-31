@@ -1,6 +1,6 @@
 ## Glossary & Domain Concepts
 
-The Postiz platform (also referred to as Robo-Multipost) is a comprehensive system for automating content distribution across social media, newsletters, and third-party platforms. Key domain entities include **Posts** (content items scheduled or published across channels), **Integrations** (authenticated connections to external providers like Instagram, LinkedIn, or Bluesky), **Autoposts** (automated workflows for recurring posts), **Agents** (AI-driven tools for content generation and management), **Launches** (campaigns or one-off content drops), **Plugs** (configurable UI extensions or settings panels), and **Providers** (platform-specific adapters, e.g., `BlueskyProvider`).
+The Postiz platform (also referred to as DestinyPost) is a comprehensive system for automating content distribution across social media, newsletters, and third-party platforms. Key domain entities include **Posts** (content items scheduled or published across channels), **Integrations** (authenticated connections to external providers like Instagram, LinkedIn, or Bluesky), **Autoposts** (automated workflows for recurring posts), **Agents** (AI-driven tools for content generation and management), **Launches** (campaigns or one-off content drops), **Plugs** (configurable UI extensions or settings panels), and **Providers** (platform-specific adapters, e.g., `BlueskyProvider`).
 
 User personas include:
 - **Content Creators/Influencers**: Schedule and auto-post multimedia content to multiple platforms.

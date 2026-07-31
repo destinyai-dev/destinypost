@@ -31,7 +31,7 @@ The Refactoring Specialist agent enhances codebase maintainability, performance,
 
 - [../../docs/planning/agents.md](../../docs/planning/agents.md) - Agent collaboration guidelines.
 - [CONTRIBUTING.md](../CONTRIBUTING.md) - Code style, PR process.
-- [Agent Handbook](https://github.com/postiz-ai/robo-multipost/wiki/Agents) - Role-specific workflows.
+- [Agent Handbook](https://github.com/postiz-ai/destinypost/wiki/Agents) - Role-specific workflows.
 - [NestJS Docs](https://docs.nestjs.com/) - Core framework reference.
 - [Prisma Docs](https://www.prisma.io/docs/) - ORM best practices.
 

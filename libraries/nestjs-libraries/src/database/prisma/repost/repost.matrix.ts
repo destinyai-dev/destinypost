@@ -2,7 +2,7 @@ import { RepostDestinationFormat, RepostSourceType } from '@prisma/client';
 
 /**
  * Formatos de destino que cada `providerIdentifier` consegue publicar via
- * API. Deriva do que ja existe nos providers do Postiz/Multipost:
+ * API. Deriva do que ja existe nos providers do Postiz/DestinyPost:
  *   - instagram.provider.ts usa `post_type: 'post' | 'story'` (via InstagramDto)
  *   - facebook.provider.ts publica video em /{page-id}/videos → vira Reel
  *   - tiktok.provider.ts usa content_posting_method=DIRECT_POST (feed)

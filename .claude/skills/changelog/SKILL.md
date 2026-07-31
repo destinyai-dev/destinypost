@@ -4,7 +4,7 @@ description: Consolidar e limpar a secao [Unreleased] do CHANGELOG.md. Cruza o r
 argument-hint: "[desde-ref] — ref git opcional para inicio do range"
 ---
 
-# Consolidar Changelog — Robo MultiPost
+# Consolidar Changelog — DestinyPost
 
 Voce esta consolidando o CHANGELOG.md do projeto. A secao `## [Unreleased]`
 ja contem um rascunho incremental preenchido durante o desenvolvimento.

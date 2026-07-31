@@ -3,9 +3,9 @@ import { INestApplication } from '@nestjs/common';
 
 export const loadSwagger = (app: INestApplication) => {
   const config = new DocumentBuilder()
-    .setTitle('Multipost API')
+    .setTitle('DestinyPost API')
     .setDescription(
-      'API pública do Robô MultiPost. ' +
+      'API pública do DestinyPost. ' +
         'Para testar os endpoints aqui, clique em **Authorize** e cole sua chave de API ' +
         '(Configurações > Integrações) — valor cru, **sem** "Bearer". ' +
         'Endpoints públicos ficam sob `/public/v1` (ex.: automações em `/public/v1/flows`).'

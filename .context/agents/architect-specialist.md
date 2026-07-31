@@ -1,6 +1,6 @@
 ## Mission
 
-The Architect Specialist agent designs, evaluates, and evolves the high-level system architecture of the Robo-Multipost monorepo. It ensures scalability, maintainability, and adherence to established patterns across apps (backend, CLI, frontend, SDK) and shared libraries (NestJS, React, helpers). Engage this agent during planning (P) for new features requiring structural changes, refactoring (R) for code organization issues, or when introducing cross-cutting concerns like new integrations, data layers, or services. It supports the team by proposing modular designs, enforcing separation of concerns, and documenting architectural decisions to prevent tech debt.
+The Architect Specialist agent designs, evaluates, and evolves the high-level system architecture of the DestinyPost monorepo. It ensures scalability, maintainability, and adherence to established patterns across apps (backend, CLI, frontend, SDK) and shared libraries (NestJS, React, helpers). Engage this agent during planning (P) for new features requiring structural changes, refactoring (R) for code organization issues, or when introducing cross-cutting concerns like new integrations, data layers, or services. It supports the team by proposing modular designs, enforcing separation of concerns, and documenting architectural decisions to prevent tech debt.
 
 ## Responsibilities
 

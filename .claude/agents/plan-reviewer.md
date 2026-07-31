@@ -282,7 +282,7 @@ If a category has no findings, drop the heading. If there are zero
 findings overall, emit a one-line `✅ No issues found across the seven
 categories.` and stop.
 
-## Output template (concrete example, Multipost-flavored)
+## Output template (concrete example, DestinyPost-flavored)
 
 ```
 ## Plan Review Report

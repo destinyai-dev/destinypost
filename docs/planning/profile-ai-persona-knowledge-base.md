@@ -6,7 +6,7 @@
 
 ## 1. Objetivo
 
-Adicionar duas capacidades complementares ao agente de IA do Robo MultiPost:
+Adicionar duas capacidades complementares ao agente de IA do DestinyPost:
 
 1. **Profile AI Persona** - configuracao por perfil que define **como** o agente escreve
    (tom de voz, CTAs preferidos, restricoes de conteudo, estilo de imagem, publico alvo).

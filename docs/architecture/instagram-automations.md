@@ -52,7 +52,7 @@ entre DM configurada vs `followGateMessage`.
 
 ## 2. Camadas de credenciais (IMPORTANTE)
 
-O Robo MultiPost tem **tres camadas distintas** de credenciais Meta. Nao
+O DestinyPost tem **tres camadas distintas** de credenciais Meta. Nao
 as misture — cada uma resolve um problema diferente.
 
 ### Camada 1 — Credenciais do App (por workspace)

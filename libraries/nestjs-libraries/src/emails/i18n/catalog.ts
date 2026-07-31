@@ -54,7 +54,7 @@ const pt: EmailCatalog = {
     'Você pode alterar suas preferências de notificação nas <a href="{{url}}">configurações da conta.</a>',
 
   // --- Digest ---
-  email_digest_subject: '[Multipost] Suas últimas notificações',
+  email_digest_subject: '[DestinyPost] Suas últimas notificações',
 
   // --- Notificações: assuntos (somente e-mail/digest) ---
   notif_channel_refresh_failed_subject:
@@ -109,7 +109,7 @@ const en: EmailCatalog = {
     'You can change your notification preferences in your <a href="{{url}}">account settings.</a>',
 
   // --- Digest ---
-  email_digest_subject: '[Multipost] Your latest notifications',
+  email_digest_subject: '[DestinyPost] Your latest notifications',
 
   // --- Notifications: subjects (email/digest only) ---
   notif_channel_refresh_failed_subject:

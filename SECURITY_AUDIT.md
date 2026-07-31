@@ -1,4 +1,4 @@
-# Auditoria de Segurança — Robô MultiPost
+# Auditoria de Segurança — DestinyPost
 
 > **Escopo:** SaaS multi-tenant (Next.js + NestJS + Temporal + Prisma/PostgreSQL + Redis, Docker Swarm).
 > **Tipo:** Auditoria *read-first* — nenhum código de aplicação foi modificado.

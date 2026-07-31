@@ -1,6 +1,6 @@
-# Robo-Multipost Documentation
+# DestinyPost Documentation
 
-Welcome to the comprehensive documentation for **Robo-Multipost** (aka Postiz), a multi-platform social media posting automation tool powered by AI agents, Temporal workflows, and extensive social integrations. This repo powers a full-stack application with SDK, CLI, browser extension, Next.js frontend, NestJS backend, and Temporal orchestrator.
+Welcome to the comprehensive documentation for **DestinyPost** (aka Postiz), a multi-platform social media posting automation tool powered by AI agents, Temporal workflows, and extensive social integrations. This repo powers a full-stack application with SDK, CLI, browser extension, Next.js frontend, NestJS backend, and Temporal orchestrator.
 
 This `docs/` folder serves as the centralized knowledge base for developers, covering architecture, workflows, integrations, and best practices. Use the sidebar or links below to navigate.
 
@@ -126,7 +126,7 @@ tsconfig*.json
 ## 🤝 Contributing
 - Follow [CONTRIBUTING.md](../CONTRIBUTING.md).
 - Use [Development Workflow](./development-workflow.md).
-- Report issues: [GitHub Issues](https://github.com/postiz/robo-multipost/issues).
+- Report issues: [GitHub Issues](https://github.com/postiz/destinypost/issues).
 
 ## 📄 License
 [MIT](../LICENSE) – See root for details.

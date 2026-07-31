@@ -1,6 +1,6 @@
 services:
   postiz:
-    image: ghcr.io/maiconramos/robo-multipost:latest
+    image: ghcr.io/destinyai-dev/destinypost:latest
     container_name: postiz
     restart: always
     environment:

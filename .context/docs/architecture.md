@@ -1,6 +1,6 @@
 ## Architecture Notes
 
-The system is assembled as a modular monorepo using Turborepo (inferred from structure), comprising distinct applications for frontend, backend API, CLI, SDK, browser extension, workflow orchestrator, and command-line tasks. Shared libraries (`libraries/nestjs-libraries`, `libraries/react-shared-libraries`, `libraries/helpers`) centralize cross-cutting concerns like database access, social integrations, AI agents, video processing, and utilities. This design emerged from the need to support multi-platform content posting ("robo-multipost") with AI-driven automation, handling synchronous API requests and asynchronous workflows. NestJS powers server-side apps for type safety and modularity, Prisma for ORM, Temporal for durable workflows (e.g., autoposting streaks), and Next.js for the frontend. The structure prioritizes separation of concerns, extensibility via provider factories, and scalability through independent deployments, evolving from a monolithic backend to distributed orchestration to manage high-volume social media interactions and AI graph executions.
+The system is assembled as a modular monorepo using Turborepo (inferred from structure), comprising distinct applications for frontend, backend API, CLI, SDK, browser extension, workflow orchestrator, and command-line tasks. Shared libraries (`libraries/nestjs-libraries`, `libraries/react-shared-libraries`, `libraries/helpers`) centralize cross-cutting concerns like database access, social integrations, AI agents, video processing, and utilities. This design emerged from the need to support multi-platform content posting ("destinypost") with AI-driven automation, handling synchronous API requests and asynchronous workflows. NestJS powers server-side apps for type safety and modularity, Prisma for ORM, Temporal for durable workflows (e.g., autoposting streaks), and Next.js for the frontend. The structure prioritizes separation of concerns, extensibility via provider factories, and scalability through independent deployments, evolving from a monolithic backend to distributed orchestration to manage high-volume social media interactions and AI graph executions.
 
 ## System Architecture Overview
 
@@ -148,7 +148,7 @@ Late API keys are resolved per-profile first, then fall back to org-level if the
 |----------|--------|---------|
 | `/integrations/late/profiles` | GET | List Late profiles |
 | `/integrations/late/accounts?profileId=` | GET | List accounts in a Late profile |
-| `/integrations/late/connect-account` | POST | Register a Late account as a Multipost channel |
+| `/integrations/late/connect-account` | POST | Register a Late account as a DestinyPost channel |
 | `/integrations/late/invite-link` | POST | Generate platform-specific invite link (calls Late `platform-invites` API) |
 | `/integrations/late/new-account-url` | GET | Get OAuth URL to connect a new account via Late |
 

@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /*
- * Robô MultiPost — CLI/skill para agentes de IA.
+ * DestinyPost — CLI/skill para agentes de IA.
  *
  * Wrapper fino e sem dependências sobre a API pública (/public/v1/*) de uma
  * instância self-hosted. Inclui automações de comentário (flows), que o CLI
  * oficial do Postiz não tem.
  *
  * Configuração (env):
- *   MULTIPOST_API_KEY  (ou POSTIZ_API_KEY)  — chave de API (org OU perfil)
- *   MULTIPOST_API_URL  (ou POSTIZ_API_URL)  — URL do backend self-hosted
+ *   DESTINYPOST_API_KEY  — chave de API (org OU perfil)
+ *   DESTINYPOST_API_URL  — URL do backend self-hosted
  *
  * Toda saída de sucesso é JSON no stdout (para o agente parsear). Erros vão
  * para o stderr e o processo sai com código 1.
@@ -18,8 +18,12 @@
 const fs = require('fs');
 const path = require('path');
 
-const API_KEY = process.env.MULTIPOST_API_KEY || process.env.POSTIZ_API_KEY;
+const API_KEY =
+  process.env.DESTINYPOST_API_KEY ||
+  process.env.MULTIPOST_API_KEY ||
+  process.env.POSTIZ_API_KEY;
 const API_URL = (
+  process.env.DESTINYPOST_API_URL ||
   process.env.MULTIPOST_API_URL ||
   process.env.POSTIZ_API_URL ||
   ''
@@ -56,10 +60,11 @@ function parseFlags(argv) {
 }
 
 function ensureConfig() {
-  if (!API_KEY) fail('MULTIPOST_API_KEY (ou POSTIZ_API_KEY) não definida.');
+  if (!API_KEY)
+    fail('DESTINYPOST_API_KEY não definida.');
   if (!API_URL)
     fail(
-      'MULTIPOST_API_URL (ou POSTIZ_API_URL) não definida. Aponte para o seu backend self-hosted, ex.: https://localmultipostapi.seu-dominio.com.br'
+      'DESTINYPOST_API_URL não definida. Aponte para o seu backend self-hosted, ex.: https://post.seu-dominio.com.br'
     );
 }
 
@@ -231,11 +236,11 @@ const commands = {
   'is-connected': async () => out(await request('GET', '/public/v1/is-connected')),
 };
 
-const HELP = `Robô MultiPost — CLI para agentes
+const HELP = `DestinyPost — CLI para agentes
 
 Config (env):
-  MULTIPOST_API_KEY (ou POSTIZ_API_KEY)   chave de API (org ou perfil)
-  MULTIPOST_API_URL (ou POSTIZ_API_URL)   URL do backend self-hosted
+  DESTINYPOST_API_KEY   chave de API (org ou perfil)
+  DESTINYPOST_API_URL   URL do backend self-hosted
 
 Comandos:
   is-connected                              valida chave/URL
@@ -266,7 +271,7 @@ async function main() {
   }
   const handler = commands[cmd];
   if (!handler) {
-    fail(`Comando desconhecido: ${cmd}. Rode "multipost help".`);
+    fail(`Comando desconhecido: ${cmd}. Rode "destinypost-agent help".`);
   }
   await handler(parseFlags(rest));
 }

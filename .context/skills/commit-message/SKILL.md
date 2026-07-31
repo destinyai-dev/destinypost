@@ -1,7 +1,7 @@
 ---
 type: skill
 name: Commit Message
-description: Draft a commit message for staged changes following Robô MultiPost's Conventional Commits convention — pt-BR sem acentos, scope detectado por área tocada, subject imperativo curto. Use after `git add` and before `git commit`, or to rewrite a poorly-named commit.
+description: Draft a commit message for staged changes following DestinyPost's Conventional Commits convention — pt-BR sem acentos, scope detectado por área tocada, subject imperativo curto. Use after `git add` and before `git commit`, or to rewrite a poorly-named commit.
 skillSlug: commit-message
 phases: [E, C]
 generated: 2026-02-20

@@ -1,7 +1,7 @@
 ---
 type: skill
 name: Bug Investigation
-description: Systematically reproduce, isolate, and fix a bug in the Robô MultiPost stack — backend (NestJS+Prisma), frontend (Next.js+SWR), orchestrator (Temporal), AI agent (Mastra). Use when a user reports an issue, a test fails intermittently, or behavior diverges from the doc. Always end with a failing-then-passing spec.
+description: Systematically reproduce, isolate, and fix a bug in the DestinyPost stack — backend (NestJS+Prisma), frontend (Next.js+SWR), orchestrator (Temporal), AI agent (Mastra). Use when a user reports an issue, a test fails intermittently, or behavior diverges from the doc. Always end with a failing-then-passing spec.
 skillSlug: bug-investigation
 phases: [E, V]
 generated: 2026-02-20

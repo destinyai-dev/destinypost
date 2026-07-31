@@ -1,7 +1,7 @@
 ---
 type: skill
 name: Test Generation
-description: Generate comprehensive test cases for code in the Robô MultiPost monorepo. Use when adding a new service/repository/controller, fixing a bug (write the failing spec first), or refactoring covered behavior. Triggers TDD red-green-refactor with Jest + jest-mock-extended.
+description: Generate comprehensive test cases for code in the DestinyPost monorepo. Use when adding a new service/repository/controller, fixing a bug (write the failing spec first), or refactoring covered behavior. Triggers TDD red-green-refactor with Jest + jest-mock-extended.
 skillSlug: test-generation
 phases: [E, V]
 generated: 2026-02-20

@@ -21,7 +21,7 @@ Onda 2 (rodar após Onda 1, em paralelo):
 ## AGENTE 1A — Late: Backend
 
 ```
-Você é um agente de desenvolvimento sênior trabalhando no Robô MultiPost,
+Você é um agente de desenvolvimento sênior trabalhando no DestinyPost,
 um fork do Postiz (NestJS + Next.js + Prisma + Temporal + PostgreSQL).
 
 ## Missão
@@ -225,7 +225,7 @@ GET /api/integrations (lista de integrações disponíveis)
 ## AGENTE 1B — Late: Frontend
 
 ```
-Você é um agente de desenvolvimento sênior trabalhando no Robô MultiPost,
+Você é um agente de desenvolvimento sênior trabalhando no DestinyPost,
 um fork do Postiz (NestJS + Next.js 14 + React 18 + Tailwind CSS 3).
 
 ## Missão
@@ -307,7 +307,7 @@ Em `apps/frontend/src/app/(app)/(site)/settings/page.tsx`:
 ## AGENTE 2A — Sistema de Credenciais: Backend
 
 ```
-Você é um agente de desenvolvimento sênior trabalhando no Robô MultiPost,
+Você é um agente de desenvolvimento sênior trabalhando no DestinyPost,
 um fork do Postiz (NestJS + Prisma + PostgreSQL).
 
 ## Contexto
@@ -503,7 +503,7 @@ Response: 204 No Content
 ## AGENTE 2B — Sistema de Credenciais: Frontend
 
 ```
-Você é um agente de desenvolvimento sênior trabalhando no Robô MultiPost,
+Você é um agente de desenvolvimento sênior trabalhando no DestinyPost,
 um fork do Postiz (Next.js 14 + React 18 + Tailwind CSS 3).
 
 ## Contexto
@@ -786,7 +786,7 @@ Isso garante: **instalações existentes continuam funcionando sem alteração**
 
 ### Etapa 0 — Já em andamento (Fase 1 do PRD)
 
-- [x] Branding Robô MultiPost
+- [x] Branding DestinyPost
 - [x] pt-BR como padrão
 - [x] README atualizado
 - [ ] Late integration (simples — só `lateApiKey` no campo da Organization por ora)

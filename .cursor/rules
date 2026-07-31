@@ -1,4 +1,4 @@
-# Robô MultiPost — Cursor Rules
+# DestinyPost — Cursor Rules
 
 Single source of truth: **`CLAUDE.md`** at the repo root, with per-area
 children (`apps/backend`, `apps/frontend`, `apps/orchestrator`,

@@ -10,9 +10,9 @@
  */
 export function buildAgentSkillMarkdown(apiUrl: string): string {
   const base = (apiUrl || '').replace(/\/+$/, '');
-  return `# Robô MultiPost — Guia de Agente
+  return `# DestinyPost — Guia de Agente
 
-Você opera uma instância **self-hosted do Robô MultiPost** (agendador de redes
+Você opera uma instância **self-hosted do DestinyPost** (agendador de redes
 sociais, fork do Postiz com automações de comentário "flows"). Este documento é a
 referência completa para um agente de IA controlar esta instância.
 
@@ -38,7 +38,7 @@ as ferramentas sozinho, incluindo as de automação). Você só precisa da URL +
 - **Endpoint (header auth, recomendado):** \`${base}/mcp\` com header \`Authorization: Bearer <CHAVE>\`
 - **Endpoint (chave na URL):** \`${base}/mcp/<CHAVE>\`
 
-Exemplo (Claude Code): \`claude mcp add multipost --transport http --header "Authorization: Bearer <CHAVE>" "${base}/mcp"\`
+Exemplo (Claude Code): \`claude mcp add destinypost-agent --transport http --header "Authorization: Bearer <CHAVE>" "${base}/mcp"\`
 
 **Ferramentas MCP disponíveis:** \`integrationList\`, \`integrationSchema\`,
 \`schedulePostTool\`, \`generateImage\`, \`generateVideoOptions\`/\`generateVideo\`,
@@ -47,18 +47,18 @@ Exemplo (Claude Code): \`claude mcp add multipost --transport http --header "Aut
 \`setCommentAutomationStatusTool\`. Use uma chave de perfil para escopar tudo a ele.
 
 ### Modo B — CLI / REST (agentes que rodam shell)
-Use o CLI \`@robo-multipost/agent\` (binário \`multipost\`) ou chame a REST direto.
+Use o CLI \`@destinyai-dev/destinypost-agent\` (binário \`destinypost-agent\`) ou chame a REST direto.
 
 CLI:
 \`\`\`bash
-export MULTIPOST_API_KEY="<CHAVE>"
-export MULTIPOST_API_URL="${base}"
-multipost is-connected
-multipost integrations:list
-multipost posts:create --content "<p>Olá!</p>" --integrationId <ID> --type now
+export DESTINYPOST_API_KEY="<CHAVE>"
+export DESTINYPOST_API_URL="${base}"
+destinypost-agent is-connected
+destinypost-agent integrations:list
+destinypost-agent posts:create --content "<p>Olá!</p>" --integrationId <ID> --type now
 \`\`\`
-(Instale com \`npm install -g @robo-multipost/agent\`, ou rode do repo com
-\`node apps/cli/bin/multipost.js …\`. Saída sempre JSON.)
+(Instale com \`npm install -g @destinyai-dev/destinypost-agent\`, ou rode do repo com
+\`node apps/cli/bin/destinypost-agent.js …\`. Saída sempre JSON.)
 
 ## Conceitos
 

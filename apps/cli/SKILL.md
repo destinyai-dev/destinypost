@@ -1,18 +1,18 @@
-# Robô MultiPost — Skill de Agente
+# DestinyPost — Skill de Agente
 
-Você controla uma instância **self-hosted do Robô MultiPost** (agendador de redes
-sociais, fork do Postiz) pela CLI `multipost`. Cada comando roda no shell e devolve
+Você controla uma instância **self-hosted do DestinyPost** (agendador de redes
+sociais, fork do Postiz) pela CLI `destinypost-agent`. Cada comando roda no shell e devolve
 **JSON no stdout**. Em erro, devolve JSON no stderr (`{"ok":false,"error":...}`) e
 sai com código 1 — então sempre cheque o exit code e parseie a saída.
 
 ## 1. Configuração (variáveis de ambiente)
 
-- `MULTIPOST_API_KEY` (ou `POSTIZ_API_KEY`) — chave de API. **Org** (acesso a todos
+- `DESTINYPOST_API_KEY` (ou `POSTIZ_API_KEY`) — chave de API. **Org** (acesso a todos
   os perfis) ou **perfil** (escopo só daquele perfil). Pegue em `Configurações > Integrações`.
-- `MULTIPOST_API_URL` (ou `POSTIZ_API_URL`) — URL do backend, ex.
-  `https://localmultipostapi.seu-dominio.com.br`.
+- `DESTINYPOST_API_URL` (ou `POSTIZ_API_URL`) — URL do backend, ex.
+  `https://post.seu-dominio.com.br`.
 
-Comece sempre validando: `multipost is-connected` → `{ "connected": true }`.
+Comece sempre validando: `destinypost-agent is-connected` → `{ "connected": true }`.
 
 ## 2. Conceitos
 
@@ -22,15 +22,15 @@ Comece sempre validando: `multipost is-connected` → `{ "connected": true }`.
 - **Post**: publicação (agendada, imediata `now`, ou `draft`).
 - **Flow (automação de comentário)**: alguém comenta uma palavra-chave num post do
   Instagram → o sistema responde e/ou manda um link no direct. **Exclusivo do
-  MultiPost.**
+  DestinyPost.**
 
 ## 3. Fluxo recomendado
 
-1. `multipost is-connected` — valida config.
-2. `multipost profiles:list` — (se chave de org) descubra os perfis.
-3. `multipost integrations:list` — pegue o `id` do canal.
-4. `multipost posts:create …` — agende/publique.
-5. (Opcional) `multipost flows:create …` — automação de comentário.
+1. `destinypost-agent is-connected` — valida config.
+2. `destinypost-agent profiles:list` — (se chave de org) descubra os perfis.
+3. `destinypost-agent integrations:list` — pegue o `id` do canal.
+4. `destinypost-agent posts:create …` — agende/publique.
+5. (Opcional) `destinypost-agent flows:create …` — automação de comentário.
 
 **Sempre confirme com o usuário** os detalhes (texto, data, canal, e — em flows — o
 gatilho, palavras-chave, resposta e link) **antes** de criar.
@@ -59,10 +59,10 @@ Para vincular uma automação a um post, há dois caminhos. **Prefira `next_publ
 
 ### Descoberta
 ```bash
-multipost is-connected
-multipost profiles:list                       # [{id, name, isDefault, hasApiKey}]
-multipost integrations:list                   # [{id, name, identifier, picture, disabled, ...}]
-multipost integrations:list --profileId <ID>  # (só com chave de org)
+destinypost-agent is-connected
+destinypost-agent profiles:list                       # [{id, name, isDefault, hasApiKey}]
+destinypost-agent integrations:list                   # [{id, name, identifier, picture, disabled, ...}]
+destinypost-agent integrations:list --profileId <ID>  # (só com chave de org)
 ```
 
 ### Posts
@@ -70,13 +70,13 @@ multipost integrations:list --profileId <ID>  # (só com chave de org)
 visual é um `<p>`; para **linha em branco** entre parágrafos, use `<p></p>` vazio.
 ```bash
 # Simples (1 post de texto):
-multipost posts:create --content "<p>Olá!</p>" --integrationId <ID> --type now
-multipost posts:create --content "<p>Agendado</p>" --integrationId <ID> \
+destinypost-agent posts:create --content "<p>Olá!</p>" --integrationId <ID> --type now
+destinypost-agent posts:create --content "<p>Agendado</p>" --integrationId <ID> \
   --date 2026-06-10T14:00:00.000Z --type schedule
-multipost posts:create --content "<p>Rascunho</p>" --integrationId <ID> --type draft
+destinypost-agent posts:create --content "<p>Rascunho</p>" --integrationId <ID> --type draft
 
 # Avançado (corpo completo — múltiplas mídias, thread, settings por plataforma):
-multipost posts:create --json '{
+destinypost-agent posts:create --json '{
   "type":"now","date":"2026-06-10T14:00:00.000Z","shortLink":false,"tags":[],
   "posts":[{"integration":{"id":"<ID>"},
             "value":[{"content":"<p>Texto</p>","image":[{"path":"<URL_OU_PATH>"}]}],
@@ -85,7 +85,7 @@ multipost posts:create --json '{
 
 # Reels do Instagram com capa custom (settings.cover):
 # 1) suba a capa (e o vídeo) por upload:url/upload:file e use os {id, path} retornados.
-multipost posts:create --json '{
+destinypost-agent posts:create --json '{
   "type":"now","date":"2026-06-10T14:00:00.000Z","shortLink":false,"tags":[],
   "posts":[{"integration":{"id":"<ID>"},
             "value":[{"content":"<p>Meu Reels</p>",
@@ -94,8 +94,8 @@ multipost posts:create --json '{
                         "cover":{"id":"<CAPA_ID>","path":"<URL_CAPA_PUBLICA>"}}}]
 }'
 
-multipost posts:list --startDate 2026-06-01T00:00:00.000Z --endDate 2026-06-30T23:59:59.999Z
-multipost posts:delete --id <POST_ID>
+destinypost-agent posts:list --startDate 2026-06-01T00:00:00.000Z --endDate 2026-06-30T23:59:59.999Z
+destinypost-agent posts:delete --id <POST_ID>
 ```
 > **Capa de Reels:** `settings.cover` é um `{id, path}` de mídia (use o objeto que
 > `upload:url`/`upload:file` retorna). O `path` precisa ser URL pública (vira
@@ -106,21 +106,21 @@ multipost posts:delete --id <POST_ID>
 
 ### Mídia
 ```bash
-multipost upload:url --url https://exemplo.com/imagem.jpg   # {id, path}
-multipost upload:file --file ./foto.jpg                     # {id, path}
+destinypost-agent upload:url --url https://exemplo.com/imagem.jpg   # {id, path}
+destinypost-agent upload:file --file ./foto.jpg                     # {id, path}
 ```
 Use o `path` retornado em `posts:create` (campo `image[].path`). Só aceita
 imagem/vídeo permitidos (SVG/HTML são rejeitados por segurança).
 
 ### Flows (automações de comentário — Instagram)
 ```bash
-multipost flows:list                          # ou --integrationId <ID>
-multipost flows:get --id <FLOW_ID>
-multipost flows:status --id <FLOW_ID> --status PAUSED   # ACTIVE|PAUSED|ARCHIVED|DRAFT
-multipost flows:delete --id <FLOW_ID>
+destinypost-agent flows:list                          # ou --integrationId <ID>
+destinypost-agent flows:get --id <FLOW_ID>
+destinypost-agent flows:status --id <FLOW_ID> --status PAUSED   # ACTIVE|PAUSED|ARCHIVED|DRAFT
+destinypost-agent flows:delete --id <FLOW_ID>
 
 # Caso comum (publicar post novo + automação) — use next_publication:
-multipost flows:create --json '{
+destinypost-agent flows:create --json '{
   "name": "Receita - link no DM",
   "integrationId": "<ID_DO_CANAL_INSTAGRAM>",
   "triggerType": "comment_on_post",
@@ -131,7 +131,7 @@ multipost flows:create --json '{
   "dmButtonText": "Quero o link",
   "dmButtonUrl": "https://exemplo.com/receita"
 }'
-# depois: multipost posts:create ... --integrationId <MESMO_ID> --type now
+# depois: destinypost-agent posts:create ... --integrationId <MESMO_ID> --type now
 ```
 
 **Campos de `flows:create` / `flows:update` (JSON):**
@@ -152,7 +152,7 @@ multipost flows:create --json '{
 
 ### Analytics
 ```bash
-multipost analytics --integration <ID> --days 7    # 7, 30 ou 90 (dias para trás)
+destinypost-agent analytics --integration <ID> --days 7    # 7, 30 ou 90 (dias para trás)
 ```
 > `--days` é **número de dias**, não data. Pode vir vazio se o canal não tiver
 > analytics ou o token tiver expirado.
@@ -171,7 +171,7 @@ multipost analytics --integration <ID> --days 7    # 7, 30 ou 90 (dias para trá
 
 Esta skill é a "fonte de verdade" que o agente lê. **Sempre que a API pública
 (`/public/v1/*`) ganhar/alterar endpoints, parâmetros ou enums, atualize:**
-1. o CLI (`apps/cli/bin/multipost.js`) — novo comando/flag;
+1. o CLI (`apps/cli/bin/destinypost.js`) — novo comando/flag;
 2. este `SKILL.md` — documentação do agente;
 3. (se aplicável) o `README.md` e o Swagger dos controllers.
 

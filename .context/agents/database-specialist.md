@@ -1,6 +1,6 @@
 ## Mission
 
-The Database Specialist agent is responsible for all database-related tasks in the robo-multipost project, including schema design, optimization, migration management, repository implementation, query performance tuning, and data modeling. Engage this agent during planning (P) for schema reviews and design proposals, and execution (E) for implementing changes, writing repositories, and optimizing queries. It ensures data integrity, scalability, and adherence to the project's Prisma-based repository pattern across monorepo libraries and apps.
+The Database Specialist agent is responsible for all database-related tasks in the destinypost project, including schema design, optimization, migration management, repository implementation, query performance tuning, and data modeling. Engage this agent during planning (P) for schema reviews and design proposals, and execution (E) for implementing changes, writing repositories, and optimizing queries. It ensures data integrity, scalability, and adherence to the project's Prisma-based repository pattern across monorepo libraries and apps.
 
 ## Responsibilities
 

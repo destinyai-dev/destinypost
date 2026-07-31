@@ -1,6 +1,6 @@
 ## Project Overview
 
-Hey there! Robo-Multipost is your all-in-one automation powerhouse for content creators, marketers, and agencies who juggle posting across dozens of social platforms like Instagram, LinkedIn, TikTok, and beyond. It tackles the chaos of manual multi-posting by offering seamless integrations, AI-powered agents for smart scheduling, video generation, and analytics—all orchestrated with reliable workflows. Whether you're a solo creator scaling launches or a team managing client campaigns, it saves hours, boosts reach, and keeps everything in sync.
+Hey there! DestinyPost is your all-in-one automation powerhouse for content creators, marketers, and agencies who juggle posting across dozens of social platforms like Instagram, LinkedIn, TikTok, and beyond. It tackles the chaos of manual multi-posting by offering seamless integrations, AI-powered agents for smart scheduling, video generation, and analytics—all orchestrated with reliable workflows. Whether you're a solo creator scaling launches or a team managing client campaigns, it saves hours, boosts reach, and keeps everything in sync.
 
 ## Codebase Reference
 
@@ -8,7 +8,7 @@ Hey there! Robo-Multipost is your all-in-one automation powerhouse for content c
 
 ## Quick Facts
 
-- Root: `/Users/maiconramos/Documents/workspace/robo-multipost`
+- Root: `/Users/destinyai-dev/Documents/workspace/destinypost`
 - Languages: TypeScript (majority), JavaScript
 - Total Files: 643
 - Total Symbols: 541

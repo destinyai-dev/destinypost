@@ -13,7 +13,7 @@ Não vou inventar nada — todos os shas vêm dos dados fornecidos. Aqui está o
 
 ---
 
-# Relatório de Sync Cirúrgico — Upstream Postiz → Robô MultiPost
+# Relatório de Sync Cirúrgico — Upstream Postiz → DestinyPost
 
 ## 1. Resumo
 

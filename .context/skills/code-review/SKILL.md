@@ -1,7 +1,7 @@
 ---
 type: skill
 name: Code Review
-description: Review a PR or diff against Robô MultiPost standards — layer pattern, TDD, i18n, AI/OAuth provider contracts, AGPL compliance, and pt-BR conventions. Use when reviewing your own staged changes before commit, reading a teammate's PR, or auditing a refactor for regressions.
+description: Review a PR or diff against DestinyPost standards — layer pattern, TDD, i18n, AI/OAuth provider contracts, AGPL compliance, and pt-BR conventions. Use when reviewing your own staged changes before commit, reading a teammate's PR, or auditing a refactor for regressions.
 skillSlug: code-review
 phases: [R, V]
 generated: 2026-02-20

@@ -66,7 +66,7 @@ npm install -g pnpm@10.6.1
 
 ```bash
 git clone <url-do-repositorio>
-cd robo-multipost
+cd destinypost
 ```
 
 ### Passo 2: Configurar variaveis de ambiente

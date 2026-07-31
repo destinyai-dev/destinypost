@@ -1,6 +1,6 @@
 services:
   postiz:
-    image: robo-multipost:custom-prisma-v1
+    image: destinypost:custom-prisma-v1
     environment:
       FONTCONFIG_FILE: /app/custom-fonts/fonts.conf
       FONTCONFIG_PATH: /app/custom-fonts

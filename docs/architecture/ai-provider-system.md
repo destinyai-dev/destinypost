@@ -2,7 +2,7 @@
 
 Documento destinado a agentes de IA (Claude, Cursor, etc.) e ao time de
 engenharia para **entender rapidamente** como o sistema de provedores de
-IA do Robo MultiPost funciona, onde cada credencial e usada, e quais sao
+IA do DestinyPost funciona, onde cada credencial e usada, e quais sao
 os pontos de entrada mais comuns para mudancas.
 
 > Usuarios finais: nao ha doc dedicado ainda — ver Settings > AI Models
@@ -12,7 +12,7 @@ os pontos de entrada mais comuns para mudancas.
 
 ## 1. Visao geral
 
-O Robo MultiPost permite que cada **workspace** configure seus proprios
+O DestinyPost permite que cada **workspace** configure seus proprios
 provedores de IA (chaves + modelos + opcoes) para 4 tipos de uso:
 
 - `TEXT` — LLM usado pelo agente Mastra, gerador de posts e botao

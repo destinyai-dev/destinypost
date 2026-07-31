@@ -2,7 +2,7 @@
 
 ## Contexto
 
-O Robô MultiPost suporta credenciais OAuth (Client ID + Client Secret) **por
+O DestinyPost suporta credenciais OAuth (Client ID + Client Secret) **por
 perfil** dentro de cada workspace, configuráveis em **Settings > Credenciais**.
 A regra (registrada em `memory/feedback_per_profile_credentials.md`) é que todo
 provider social com OAuth precisa propagar `ClientInformation` em

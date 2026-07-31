@@ -50,7 +50,7 @@ export class FlowsController {
     const creds = await this._credentialService
       .getRawShared(org.id, 'facebook', profile?.id)
       .catch(() => null);
-    const verifyToken = creds?.webhookVerifyToken || 'multipost';
+    const verifyToken = creds?.webhookVerifyToken || 'destinypost';
 
     return {
       callbackUrl: rawBase ? `${rawBase}${callbackPath}` : callbackPath,

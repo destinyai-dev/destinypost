@@ -1,6 +1,6 @@
 # Multi-Tenancy — Usuarios, Organizacoes e Perfis
 
-O Robo MultiPost possui um sistema de multi-tenancy em 3 niveis que permite desde uso individual ate agencias gerenciando dezenas de clientes.
+O DestinyPost possui um sistema de multi-tenancy em 3 niveis que permite desde uso individual ate agencias gerenciando dezenas de clientes.
 
 ## Hierarquia
 
@@ -123,7 +123,7 @@ Cada perfil tem seus proprios:
 
 ### Caso 1: Freelancer / Uso pessoal
 
-Joao usa o Robo MultiPost para agendar posts nas suas proprias redes sociais.
+Joao usa o DestinyPost para agendar posts nas suas proprias redes sociais.
 
 **Setup:**
 - 1 usuario (Joao)

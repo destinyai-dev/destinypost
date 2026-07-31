@@ -1,4 +1,4 @@
-# CLI / Skill de Agente (`@robo-multipost/agent`) — Claude Code Instructions
+# CLI / Skill de Agente (`@destinyai-dev/destinypost-agent`) — Claude Code Instructions
 
 ## Position in Hierarchy
 
@@ -18,16 +18,16 @@ do Postiz (cloud-oriented, sem automações), este é self-hosted-aware e inclui
 
 | Arquivo | Conteúdo |
 |---|---|
-| `bin/multipost.js` | O CLI (executável, zero-dep). Cada comando → um endpoint `/public/v1/*`. Saída JSON no stdout; erro JSON no stderr + exit 1. |
+| `bin/destinypost-agent.js` | O CLI (executável, zero-dep). Cada comando → um endpoint `/public/v1/*`. Saída JSON no stdout; erro JSON no stderr + exit 1. |
 | `SKILL.md` | Referência que o **agente lê** para aprender os comandos (inclui o schema dos flows e a regra `next_publication` vs `specific`). |
 | `README.md` | Setup humano + uso com agentes. |
-| `package.json` | `bin: multipost`, sem deps. Nome `@robo-multipost/agent` (placeholder até definir escopo npm). |
+| `package.json` | `bin: destinypost-agent`, sem deps. Nome `@destinyai-dev/destinypost-agent`. |
 
 ## Specific Patterns and Rules
 
 ### Config por env (nunca hardcode URL/chave)
 
-O CLI lê `MULTIPOST_API_KEY`/`MULTIPOST_API_URL` (com fallback `POSTIZ_API_KEY`/
+O CLI lê `DESTINYPOST_API_KEY`/`DESTINYPOST_API_URL` (com fallback `POSTIZ_API_KEY`/
 `POSTIZ_API_URL`). **Não** embuta URL nem chave no código — é multi-instância.
 
 ### Saída sempre JSON
@@ -41,7 +41,7 @@ Esta é a regra mais importante desta área. **Sempre que a API pública
 (`/public/v1/*`) ganhar ou alterar um endpoint, parâmetro, enum ou comportamento
 relevante para um agente**, atualize na MESMA mudança:
 
-1. **`bin/multipost.js`** — adicione/ajuste o comando ou flag correspondente.
+1. **`bin/destinypost-agent.js`** — adicione/ajuste o comando ou flag correspondente.
 2. **`SKILL.md`** — documente para o agente (exemplos + schema). Fonte de verdade
    do pacote npm/local.
 3. **`libraries/nestjs-libraries/src/agent/agent.skill.template.ts`** — o guia
@@ -67,17 +67,17 @@ para agentes que rodam **shell + leem um SKILL.md** (Hermes/OpenClaw no modo ski
 
 ### Adicionar um comando novo (após a API ganhar um endpoint)
 
-1. Adicione o handler em `commands` no `bin/multipost.js` (mapeie para o endpoint).
+1. Adicione o handler em `commands` no `bin/destinypost-agent.js` (mapeie para o endpoint).
 2. Adicione à seção de comandos do `HELP` e do `SKILL.md` (com exemplo).
-3. Teste: `node bin/multipost.js <comando> ...` (use `httpbin.org` como `MULTIPOST_API_URL`
+3. Teste: `node bin/destinypost-agent.js <comando> ...` (use `httpbin.org` como `DESTINYPOST_API_URL`
    para validar o caminho HTTP sem tocar produção).
 
 ### Publicar no npm (opcional)
 
-`bin/multipost.js` é JS puro, sem build. Para distribuir: ajuste `name` para um
+`bin/destinypost-agent.js` é JS puro, sem build. Para distribuir: ajuste `name` para um
 escopo seu, `npm login`, `npm publish --access public`. **Um** pacote serve todas as
-instâncias (cada usuário define seu `MULTIPOST_API_URL`/chave). Não é necessário para
-self-hosted usar localmente (`node bin/multipost.js` ou `npm link`).
+instâncias (cada usuário define seu `DESTINYPOST_API_URL`/chave). Não é necessário para
+self-hosted usar localmente (`node bin/destinypost-agent.js` ou `npm link`).
 
 ## Known Pitfalls
 
@@ -86,14 +86,14 @@ self-hosted usar localmente (`node bin/multipost.js` ou `npm link`).
    próximo post); `specific`+polling só para posts pré-existentes. (Documentado no SKILL.md §4.)
 2. **`posts:list` retornando 400** → **Causa:** faltou `--startDate`/`--endDate`
    (obrigatórios). **Fix:** sempre passe o intervalo ISO 8601.
-3. **CLI "não funciona" no self-hosted** → **Causa:** `MULTIPOST_API_URL` não setada,
+3. **CLI "não funciona" no self-hosted** → **Causa:** `DESTINYPOST_API_URL` não setada,
    então cairia no default cloud do ecossistema Postiz. **Fix:** exporte a URL do backend.
 
 ## Commands
 
 ```bash
-node apps/cli/bin/multipost.js help
-cd apps/cli && npm link && multipost is-connected
+node apps/cli/bin/destinypost-agent.js help
+cd apps/cli && npm link && destinypost-agent is-connected
 ```
 
 ## References

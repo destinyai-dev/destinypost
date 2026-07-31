@@ -19,14 +19,14 @@ const configureFontDirectory = (): void => {
       'pdfjs-dist',
       'standard_fonts'
     ).replace(/\\/g, '/');
-    const configPath = join(tmpdir(), 'robo-multipost-fonts.conf');
+    const configPath = join(tmpdir(), 'destinypost-fonts.conf');
     writeFileSync(
       configPath,
       `<?xml version="1.0"?>
 <!DOCTYPE fontconfig SYSTEM "fonts.dtd">
 <fontconfig>
   <dir>${fontDirectory}</dir>
-  <cachedir>${join(tmpdir(), 'robo-multipost-font-cache').replace(
+  <cachedir>${join(tmpdir(), 'destinypost-font-cache').replace(
     /\\/g,
     '/'
   )}</cachedir>

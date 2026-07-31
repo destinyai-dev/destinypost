@@ -1,6 +1,6 @@
 # Automacoes Instagram (estilo ManyChat)
 
-Guia completo para configurar e usar automacoes de comentarios do Instagram no Robo MultiPost.
+Guia completo para configurar e usar automacoes de comentarios do Instagram no DestinyPost.
 
 ## O que e
 
@@ -18,11 +18,11 @@ A arquitetura suporta **multi-tenancy**: cada perfil/workspace pode ter seu prop
 - Conta Instagram Business (com ou sem Pagina do Facebook — ver proximo bloco)
 - App criado em [developers.facebook.com](https://developers.facebook.com)
 - Dominio publico (ou ngrok/cloudflared em desenvolvimento) para receber os webhooks
-- Instagram ja conectado na tela **Canais** do Robo MultiPost
+- Instagram ja conectado na tela **Canais** do DestinyPost
 
 ### Escolha de fluxo de conexao (IMPORTANTE)
 
-O Robo MultiPost oferece dois canais Instagram na tela de conexao:
+O DestinyPost oferece dois canais Instagram na tela de conexao:
 
 | Canal | Quando usar | Follow gate funciona sem App Review? |
 |---|---|---|
@@ -52,22 +52,22 @@ O Robo MultiPost oferece dois canais Instagram na tela de conexao:
 
 ---
 
-## Passo 2 — Cadastrar credenciais do App no Robo MultiPost
+## Passo 2 — Cadastrar credenciais do App no DestinyPost
 
 Cada perfil pode ter seu proprio App Meta. Configure as credenciais em **Configuracoes > Credenciais de Apps**.
 
-1. Faca login no Robo MultiPost com um perfil de **Admin**
+1. Faca login no DestinyPost com um perfil de **Admin**
 2. Acesse **Configuracoes > Credenciais de Apps**
 3. Expanda o card **Facebook / Instagram / Threads** e preencha:
    | Campo | Valor |
    |---|---|
    | **Client ID** | App ID do painel Meta |
    | **Client Secret** | App Secret do painel Meta (usado para HMAC do webhook) |
-   | **Webhook Verify Token** | *(opcional)* deixe vazio para usar o padrao `multipost` |
+   | **Webhook Verify Token** | *(opcional)* deixe vazio para usar o padrão `destinypost` |
 4. Clique em **Salvar credenciais**
 5. Clique em **Testar conexao** para validar Client ID + Secret
 
-> O **Verify Token** e apenas um handshake publico de setup. A seguranca real do webhook vem do HMAC SHA-256 com o **App Secret**. Por isso o Robo MultiPost aceita o valor padrao `multipost` — zero config para voce. Se quiser personalizar, preencha o campo.
+> O **Verify Token** é apenas um handshake público de setup. A segurança real do webhook vem do HMAC SHA-256 com o **App Secret**. Por isso o DestinyPost usa `destinypost` como padrão. Instalações antigas com o token `multipost` continuam aceitas para manter compatibilidade.
 
 ---
 
@@ -77,12 +77,12 @@ Apos salvar Client ID + Client Secret no Passo 2, ainda no card **Facebook / Ins
 
 **Configurar webhook Instagram na Meta**
 
-Clicando nele, o Robo MultiPost:
+Clicando nele, o DestinyPost:
 1. Gera um App Access Token (`{client_id}|{client_secret}`)
 2. Chama `POST https://graph.facebook.com/v20.0/{app_id}/subscriptions` com:
    - `object=instagram`
    - `callback_url=https://SEU-DOMINIO/public/ig-webhook`
-   - `verify_token=multipost`
+   - `verify_token=destinypost`
    - `fields=comments,messages`
 3. A Meta faz o handshake GET no endpoint e, se validar, o webhook fica ativo
 
@@ -97,16 +97,16 @@ Se quiser configurar na mao, va em **Meta Developer Portal > Products > Webhooks
 | Campo | Valor |
 |---|---|
 | **Callback URL** | `https://SEU-DOMINIO/public/ig-webhook` |
-| **Verify Token** | `multipost` |
+| **Verify Token** | `destinypost` |
 | **Subscribed Fields** | `comments`, `messages` |
 
-A tela **Automacoes** do Robo MultiPost mostra esses valores prontos para copiar.
+A tela **Automacoes** do DestinyPost mostra esses valores prontos para copiar.
 
 ---
 
 ## Passo 4 — Conectar (ou reconectar) Instagram
 
-O scope `instagram_manage_messages` foi adicionado recentemente. Contas conectadas antes dessa versao precisam ser **reconectadas** para o Robo MultiPost ter permissao de enviar DMs.
+O scope `instagram_manage_messages` foi adicionado recentemente. Contas conectadas antes dessa versao precisam ser **reconectadas** para o DestinyPost ter permissao de enviar DMs.
 
 1. Acesse **Canais**
 2. Remova o canal Instagram atual (se existir)
@@ -153,7 +153,7 @@ No wizard "Nova Automacao Rapida" voce escolhe em qual post a automacao vai roda
 |---|---|
 | **Uma publicacao ou reel especifico** | Seleciona um ou mais posts ja existentes no feed e a flow so dispara neles |
 | **Qualquer publicacao ou reel** | Dispara em todos os posts atuais e futuros da conta |
-| **A proxima publicacao que eu fizer** | A flow fica pendente ate o proximo feed ou reel da conta ser publicado. Nesse momento ela se vincula *apenas* aquele post e converte para o modo "especifico". Stories nao sao suportados — se o proximo post for um story ele sera ignorado e a flow continua pendente ate chegar um feed/reel. **One-shot**: para cobrir o proximo post depois desse, crie outra flow. Funciona tanto para posts publicados pelo Robo MultiPost quanto direto no app do Instagram, Creator Studio ou Meta Business Suite |
+| **A proxima publicacao que eu fizer** | A flow fica pendente ate o proximo feed ou reel da conta ser publicado. Nesse momento ela se vincula *apenas* aquele post e converte para o modo "especifico". Stories nao sao suportados — se o proximo post for um story ele sera ignorado e a flow continua pendente ate chegar um feed/reel. **One-shot**: para cobrir o proximo post depois desse, crie outra flow. Funciona tanto para posts publicados pelo DestinyPost quanto direto no app do Instagram, Creator Studio ou Meta Business Suite |
 
 > Se voce criar multiplas flows em modo "Proxima publicacao" para a mesma conta, todas serao vinculadas simultaneamente ao mesmo proximo post — cada uma com suas proprias palavras-chave e mensagens.
 
@@ -178,7 +178,7 @@ No wizard "Nova Automacao Rapida" voce escolhe em qual post a automacao vai roda
 2. Em alguns segundos:
    - O comentario recebe a resposta automatica
    - O comentarista recebe a DM
-3. Volte ao Robo MultiPost > Automacoes > sua automacao > **Historico**
+3. Volte ao DestinyPost > Automacoes > sua automacao > **Historico**
 4. Voce vera a execucao com status **COMPLETED** e log de cada no executado
 
 ---
@@ -191,7 +191,7 @@ O Meta envia eventos para **uma unica URL** (`/public/ig-webhook`). Como saber a
 
 1. O payload do webhook contem `entry[].id` = ID da Pagina do Facebook
 2. Na tabela `Integration` temos esse ID em `internalId` ou derivado de `rootInternalId`
-3. O Robo MultiPost busca a integracao correspondente -> descobre org + perfil
+3. O DestinyPost busca a integracao correspondente -> descobre org + perfil
 4. Carrega a credencial `facebook` desse org/perfil
 5. Valida o HMAC SHA-256 do payload com o `Client Secret` dessa credencial
 6. Se bater, dispara o workflow Temporal
@@ -339,7 +339,7 @@ A execucao de flow para story usa `igMessageId` como chave de idempotencia (em v
 
 ## Configuracao de Messaging Tokens (obrigatorio para DM de story)
 
-A automacao de story envia a resposta via **Send API** do Meta, que exige um token de messaging separado do token usado para postagem. O Robo MultiPost aceita duas opcoes, com prioridade automatica (System User Token se configurado, senao cai no token por conta).
+A automacao de story envia a resposta via **Send API** do Meta, que exige um token de messaging separado do token usado para postagem. O DestinyPost aceita duas opcoes, com prioridade automatica (System User Token se configurado, senao cai no token por conta).
 
 Ambas as opcoes exigem que o app Meta esteja em **Live Mode** (Meta Developer Portal > Settings > Basic > App Mode: Live). Isso nao exige App Review — so requer Privacy Policy URL, categoria e Terms of Service configurados no app.
 
@@ -360,7 +360,7 @@ Como gerar:
    - Expiration: **Never**
    - Permissions: selecione pelo menos `instagram_basic`, `instagram_manage_comments`, `instagram_manage_messages`, `pages_messaging`, `pages_read_engagement`, `pages_show_list`, `business_management`
 5. Copie o token (Meta so mostra 1 vez — salve num lugar seguro temporariamente).
-6. No Robo MultiPost, va em **Settings > Credenciais > Instagram > Tokens de Messaging > Meta System User Token** e cole o token no campo.
+6. No DestinyPost, va em **Settings > Credenciais > Instagram > Tokens de Messaging > Meta System User Token** e cole o token no campo.
 7. Clique em **Validar e salvar**. O backend chama `/me` e `/me/accounts` no Graph API pra confirmar que o token e valido e mostra o business name + contas conectadas.
 
 Com isso feito, **todas** as automacoes de story passam a funcionar imediatamente. O token nao precisa ser atualizado ate o admin revogar no Meta Dashboard.
@@ -382,11 +382,11 @@ Como gerar:
 2. Na secao **Generate access tokens**, clique em **Add or remove Instagram accounts** e adicione a conta IG Business que quer automatizar.
 3. Ao lado da conta, clique em **Generate token** — Meta abre uma janela de consentimento e retorna um **long-lived Instagram User Access Token** (60 dias).
 4. Copie o token.
-5. No Robo MultiPost, va em **Settings > Credenciais > Instagram > Tokens de Messaging > Tokens por conta Instagram**.
+5. No DestinyPost, va em **Settings > Credenciais > Instagram > Tokens de Messaging > Tokens por conta Instagram**.
 6. Clique em **+ Adicionar conta**, cole o token e clique em **Validar e salvar**. O backend chama `graph.instagram.com/me` pra validar, captura o IG User ID e o username da conta, e salva com `refreshedAt = now`.
 7. Repita pra cada conta IG que quer automatizar.
 
-A partir dai, o Robo MultiPost renova o token automaticamente sempre que a automacao for disparada apos 24h da ultima renovacao. Voce nao precisa mexer.
+A partir dai, o DestinyPost renova o token automaticamente sempre que a automacao for disparada apos 24h da ultima renovacao. Voce nao precisa mexer.
 
 ### Como o Robo decide qual usar
 

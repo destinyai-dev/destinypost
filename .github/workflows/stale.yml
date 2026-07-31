@@ -7,7 +7,7 @@ on:
 
 jobs:
   close-issues:
-    if: github.repository == 'maiconramos/robo-multipost'
+    if: github.repository == 'destinyai-dev/destinypost'
     runs-on: ubuntu-latest
     permissions:
       issues: write

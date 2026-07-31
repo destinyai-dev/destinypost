@@ -1,10 +1,10 @@
 ---
 name: sync-upstream
-description: Sincronizar o fork Robo MultiPost com o repositorio upstream Postiz. Guia passo a passo com fetch, merge na branch postiz, merge em main, resolucao de conflitos e verificacao de build.
+description: Sincronizar o fork DestinyPost com o repositorio upstream Postiz. Guia passo a passo com fetch, merge na branch postiz, merge em main, resolucao de conflitos e verificacao de build.
 argument-hint: "[--dry-run] — simular sem executar merges"
 ---
 
-# Sync Upstream — Postiz -> Robo MultiPost
+# Sync Upstream — Postiz -> DestinyPost
 
 Voce esta guiando o usuario pela sincronizacao com o upstream Postiz.
 Este e um processo delicado que requer atencao a conflitos. Siga cada passo.
@@ -107,7 +107,7 @@ git merge postiz
   | Traducoes | `libraries/react-shared-libraries/src/translation/` | Manter nossas traducoes pt-BR, adicionar chaves novas do upstream |
   | Backend | `apps/backend/`, `libraries/nestjs-libraries/` | Geralmente aceitar upstream, verificar se nao quebra integracao |
   | Config | `package.json`, `tsconfig*` | Aceitar deps do upstream, manter metadados do fork (nome, versao) |
-  | CI/CD | `.github/workflows/` | Manter nosso registry (maiconramos), aceitar melhorias de workflow |
+  | CI/CD | `.github/workflows/` | Manter nosso registry (destinyai-dev), aceitar melhorias de workflow |
   | Docs | `README.md`, `docs/` | Manter nosso README, aceitar docs novos |
   | Branding | Logos, imagens | Sempre manter os nossos |
 

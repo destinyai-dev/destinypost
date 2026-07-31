@@ -1,4 +1,4 @@
-# Plano de Hardening de Segurança — Robô MultiPost
+# Plano de Hardening de Segurança — DestinyPost
 
 > **Contexto:** auditoria de segurança realizada em 2026-04-04 identificou 40+ vulnerabilidades (6 críticas, 14 altas, 20+ médias/baixas). Este documento organiza as correções em **ondas de implementação**, das mais críticas às opcionais, **sem introduzir breaking changes** para instalações self-hosted em produção.
 >

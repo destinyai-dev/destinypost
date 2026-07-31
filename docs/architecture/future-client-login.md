@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Permitir que clientes de agencias acessem o Robo MultiPost com visao restrita ao seu perfil, sem ver dados de outros clientes ou configuracoes da agencia.
+Permitir que clientes de agencias acessem o DestinyPost com visao restrita ao seu perfil, sem ver dados de outros clientes ou configuracoes da agencia.
 
 ## Modelo Proposto
 

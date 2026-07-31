@@ -35,7 +35,7 @@ The Code Reviewer agent ensures code quality, adherence to project standards, an
 ## Key Project Resources
 
 - [../../docs/planning/agents.md](../../docs/planning/agents.md) - Overview of all agents and collaboration.
-- [Contributor Guide](https://github.com/postiz/robo-multipost/blob/main/CONTRIBUTING.md) - Onboarding and standards.
+- [Contributor Guide](https://github.com/postiz/destinypost/blob/main/CONTRIBUTING.md) - Onboarding and standards.
 - [Agent Handbook](../docs/AGENTS-HANDBOOK.md) - Detailed agent workflows.
 - [Architecture Docs](../docs/ARCHITECTURE.md) - Monorepo structure and layers.
 

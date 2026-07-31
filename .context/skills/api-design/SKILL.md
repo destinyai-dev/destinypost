@@ -1,7 +1,7 @@
 ---
 type: skill
 name: Api Design
-description: Design REST endpoints for the NestJS backend (apps/backend) following Robô MultiPost conventions — DTOs with class-validator, Swagger decorators, correct HTTP status codes (412 for missing config, never 402), explicit rate limits, and per-profile credential scoping. Use when adding a new endpoint, evolving an existing contract, or reviewing an API proposal.
+description: Design REST endpoints for the NestJS backend (apps/backend) following DestinyPost conventions — DTOs with class-validator, Swagger decorators, correct HTTP status codes (412 for missing config, never 402), explicit rate limits, and per-profile credential scoping. Use when adding a new endpoint, evolving an existing contract, or reviewing an API proposal.
 skillSlug: api-design
 phases: [P, R]
 generated: 2026-02-20

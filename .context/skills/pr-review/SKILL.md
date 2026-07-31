@@ -54,7 +54,7 @@ Walk these checkpoints in order. **Block** on any failure under "Required"; **co
 ## 6. AGPL and fork hygiene (Required)
 
 - Postiz attribution preserved in user-visible artifacts (footer, About, package.json metadata). Reject removal.
-- Branding "Robô MultiPost" applied where appropriate without erasing Postiz credit.
+- Branding "DestinyPost" applied where appropriate without erasing Postiz credit.
 - No upstream-only files modified outside of an explicit `chore: sync upstream` PR (see `sync-upstream` skill / runbook).
 
 ## 7. Security and operational risk (Required, when applicable)

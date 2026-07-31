@@ -1,160 +1,103 @@
 <p align="center">
-  <img alt="Robô MultiPost Logo" src="apps/frontend/public/logo-text.svg" width="280"/>
+  <img alt="DestinyPost" src="apps/frontend/public/destinypost-logo.png" width="420" />
 </p>
 
-<h2 align="center">Robô MultiPost</h2>
-<p align="center">Agendador de redes sociais self-hosted para a comunidade Automação Sem Limites</p>
+<h1 align="center">DestinyPost</h1>
+<p align="center">Plataforma self-hosted para planejar, criar, automatizar e publicar conteúdo em redes sociais.</p>
 
 <p align="center">
   <a href="https://opensource.org/license/agpl-v3">
-    <img src="https://img.shields.io/badge/License-AGPL%203.0-blue.svg" alt="License">
+    <img src="https://img.shields.io/badge/License-AGPL%203.0-blue.svg" alt="Licença AGPL-3.0" />
   </a>
-  <a href="https://github.com/gitroomhq/postiz-app">
-    <img src="https://img.shields.io/badge/Fork%20do-Postiz-orange.svg" alt="Fork do Postiz">
+  <a href="https://github.com/destinyai-dev/destinypost">
+    <img src="https://img.shields.io/badge/GitHub-destinyai--dev%2Fdestinypost-78c53a.svg" alt="Repositório DestinyPost" />
   </a>
 </p>
 
-<div align="center">
-  <img alt="Instagram" src="https://postiz.com/svgs/socials/Instagram.svg" width="32">
-  <img alt="Youtube" src="https://postiz.com/svgs/socials/Youtube.svg" width="32">
-  <img alt="Dribbble" src="https://postiz.com/svgs/socials/Dribbble.svg" width="32">
-  <img alt="Linkedin" src="https://postiz.com/svgs/socials/Linkedin.svg" width="32">
-  <img alt="Reddit" src="https://postiz.com/svgs/socials/Reddit.svg" width="32">
-  <img alt="TikTok" src="https://postiz.com/svgs/socials/TikTok.svg" width="32">
-  <img alt="Facebook" src="https://postiz.com/svgs/socials/Facebook.svg" width="32">
-  <img alt="Pinterest" src="https://postiz.com/svgs/socials/Pinterest.svg" width="32">
-  <img alt="Threads" src="https://postiz.com/svgs/socials/Threads.svg" width="32">
-  <img alt="X" src="https://postiz.com/svgs/socials/X.svg" width="32">
-  <img alt="Slack" src="https://postiz.com/svgs/socials/Slack.svg" width="32">
-  <img alt="Discord" src="https://postiz.com/svgs/socials/Discord.svg" width="32">
-  <img alt="Mastodon" src="https://postiz.com/svgs/socials/Mastodon.svg" width="32">
-  <img alt="Bluesky" src="https://postiz.com/svgs/socials/Bluesky.svg" width="32">
-</div>
+## Sobre o DestinyPost
 
----
-
-## O que é
-
-O Robô MultiPost é um agendador de redes sociais self-hosted com suporte a **33+ canais**. Baseado no [Postiz](https://github.com/gitroomhq/postiz-app) (open-source, AGPL-3.0), foi adaptado para rodar em VPS com Docker, focado no público brasileiro da comunidade Automação Sem Limites.
+O **DestinyPost** reúne agendamento, publicação, biblioteca de mídia, agentes de IA, criação de carrosséis, automações e integrações em uma única instalação. Cada cliente pode executar sua própria instância em uma VPS e cadastrar as próprias credenciais de redes sociais e APIs pela interface.
 
 Principais recursos:
-- Agendamento de posts via calendário para múltiplas redes
-- Analytics integrado por canal
-- Biblioteca de mídia centralizada
-- Colaboração em equipe
-- Integração com IA para geração de conteúdo
-- API pública e webhooks — compatível com n8n
 
-## Redes suportadas
+- calendário e agendamento para múltiplas redes sociais;
+- publicação imediata ou programada;
+- agentes de IA com memória por conversa e perfil;
+- mapeamento de perfis do Instagram e estratégia de conteúdo;
+- criação e edição de carrosséis;
+- biblioteca de mídia e integração com Canva;
+- automações para comentários e mensagens do Instagram;
+- organizações, perfis, equipes e permissões isoladas;
+- API pública, MCP e webhooks para integrações como n8n;
+- instalação privada com Docker, HTTPS automático e comandos de manutenção.
 
-Instagram, Facebook, X (Twitter), LinkedIn, TikTok, YouTube, Pinterest, Threads, Reddit, Discord, Slack, Mastodon, Bluesky, Dribbble e mais.
+## Redes sociais
 
-## Pré-requisitos
+Instagram, Facebook, X, LinkedIn, TikTok, YouTube, Pinterest, Threads, Reddit, Discord, Slack, Mastodon, Bluesky, Dribbble e outros canais compatíveis com a plataforma.
 
-| Requisito | Mínimo | Recomendado |
-|---|---|---|
-| RAM da VPS | 2 GB | 4 GB |
-| Docker + Docker Compose | v2+ | Última versão estável |
-| Domínio apontando para a VPS | Opcional | Recomendado (para HTTPS) |
+## Requisitos da VPS
 
-## Instalação rápida (Docker Compose)
+| Recurso | Mínimo | Recomendado |
+|---|---:|---:|
+| Memória RAM | 4 GB | 8 GB |
+| Armazenamento livre | 35 GB | 80 GB ou mais |
+| Sistema operacional | Ubuntu 22.04/24.04 ou Debian 12 | Ubuntu LTS |
+| Domínio | Registro A apontado para a VPS | Obrigatório para HTTPS |
+| Portas liberadas | 22, 80 e 443 | 22 restrita ao IP do administrador |
 
-O Robô MultiPost precisa de **5 serviços** rodando simultaneamente:
+## Instalação para clientes
 
-1. **App** — backend (NestJS) + frontend (Next.js) em um único container
-2. **PostgreSQL 17** — banco de dados principal
-3. **Redis 7** — cache e filas
-4. **Temporal** — orquestrador de workflows (crítico para o agendamento funcionar)
-5. **Nginx** — reverse proxy (embutido no container da app)
-
-### Passo a passo
-
-```bash
-# 1. Baixar o arquivo de configuração
-curl -o docker-compose.yml https://raw.githubusercontent.com/maiconramos/robo-multipost/main/docker-compose.yaml
-
-# 2. Baixar o arquivo de variáveis de ambiente
-curl -o .env.example https://raw.githubusercontent.com/maiconramos/robo-multipost/main/.env.example
-
-# 3. Criar seu arquivo de variáveis de ambiente
-cp .env.example .env
-
-# 4. Editar o .env com suas configurações (ver tabela abaixo)
-nano .env
-
-# 5. Subir todos os serviços
-docker compose up -d
-```
-
-> **Nota:** O Temporal leva alguns segundos a mais para iniciar completamente. Se a app apresentar erros de conexão nos primeiros segundos, aguarde e ela se reconectará automaticamente.
-
-## Variáveis de ambiente obrigatórias
-
-Edite o arquivo `.env` (ou as variáveis no `docker-compose.yml`) com pelo menos as seguintes configurações:
-
-| Variável | Descrição | Exemplo |
-|---|---|---|
-| `MAIN_URL` | URL pública da aplicação | `https://seu-dominio.com` |
-| `FRONTEND_URL` | URL do frontend | `https://seu-dominio.com` |
-| `NEXT_PUBLIC_BACKEND_URL` | URL pública da API | `https://seu-dominio.com/api` |
-| `DATABASE_URL` | Conexão PostgreSQL | `postgresql://postiz-user:postiz-password@postiz-postgres:5432/postiz-db-local` |
-| `REDIS_URL` | Conexão Redis | `redis://postiz-redis:6379` |
-| `JWT_SECRET` | Chave JWT (string longa aleatória) | Use `openssl rand -base64 32` |
-| `IS_GENERAL` | Modo self-hosted | `true` |
-| `STORAGE_PROVIDER` | Provider de storage | `local` |
-
-> **Dica:** Consulte o arquivo `.env.example` para ver a lista completa de variáveis disponíveis, incluindo configurações de redes sociais, IA e integrações.
-
-## Como atualizar
+A distribuição oficial é privada. O cliente recebe um token de leitura e o instalador da release autorizada. O processo instala Docker, banco de dados, Redis, Temporal, Elasticsearch, Caddy e o aplicativo DestinyPost.
 
 ```bash
-# Atualizar para a versão mais recente
-docker compose pull
-docker compose up -d
+chmod +x install.sh
+sudo bash install.sh
 ```
 
-Para atualizar para uma versão específica, edite o `docker-compose.yml` e altere a tag da imagem antes de rodar os comandos acima.
+Durante a instalação serão solicitados:
 
-## Multi-Tenancy (Organizacoes e Perfis)
+1. domínio já apontado para o IPv4 da VPS;
+2. e-mail para o certificado HTTPS;
+3. token de leitura da distribuição DestinyPost.
 
-O Robo MultiPost suporta multi-tenancy em 3 niveis: **Usuario > Organizacao > Perfil**. Isso permite desde uso individual ate agencias gerenciando multiplos clientes com equipes e permissoes isoladas.
+Ao concluir, abra o domínio e crie a primeira conta. Essa conta será a administradora e o cadastro público será bloqueado depois dela.
 
-Para o guia completo com exemplos de casos de uso, consulte a [documentacao de Multi-Tenancy](docs/multi-tenancy.md).
+## Manutenção
 
-## Automacoes Instagram (estilo ManyChat)
+O instalador adiciona o comando `destinypost` à VPS:
 
-Crie fluxos visuais para responder automaticamente a comentarios em postagens do Instagram: enviar respostas, DMs, aplicar condicoes por palavra-chave e delays duraveis via Temporal.
+```bash
+destinypost status
+destinypost logs
+destinypost doctor
+destinypost backup
+destinypost update
+```
 
-Para o guia completo de configuracao (App Meta, webhook, credenciais por perfil) consulte a [documentacao de Automacoes Instagram](docs/automacoes-instagram.md).
+Os dados persistentes ficam fora do container em volumes Docker. Uma atualização troca a imagem da aplicação sem apagar banco de dados, uploads ou configurações.
 
-## Integração com n8n
+## Desenvolvimento
 
-O Robô MultiPost possui API pública disponível em `/api/`. Você pode usar essa API para integrar com o n8n e automatizar seus fluxos de publicação.
+O projeto usa pnpm workspaces, Next.js, React, NestJS, PostgreSQL/Prisma, Redis, Temporal e Docker.
 
-- Suporte a webhooks para eventos de publicação
-- Compatível com o node do n8n para Postiz (`n8n-nodes-postiz`)
-- O limite padrão da API é de 30 requisições por hora (configurável via variável `API_LIMIT`)
+```bash
+pnpm install
+pnpm run dev
+```
 
-## Tech Stack
+Documentos importantes:
 
-- **Monorepo:** pnpm workspaces
-- **Frontend:** Next.js 14 + React 18 + Tailwind CSS
-- **Backend:** NestJS (TypeScript)
-- **Banco de dados:** PostgreSQL 17 (via Prisma ORM)
-- **Cache/Filas:** Redis 7
-- **Orquestração:** Temporal.io
-- **IA:** Mastra framework + MCP
+- [Instalação self-hosted](deployment/self-hosted/README.md)
+- [API pública](docs/api/public-api.md)
+- [Automações do Instagram](docs/automacoes-instagram.md)
+- [Arquitetura multi-tenant](docs/architecture/multi-tenancy.md)
 
-## Desenvolvimento local
+## Autoria e manutenção
 
-Para instruções detalhadas de setup local (desenvolvimento e produção), consulte o arquivo [validacao-dev.md](validacao-dev.md) na raiz do repositório.
+O **DestinyPost** é desenvolvido e mantido pela **Destiny AI**, por meio da organização [destinyai-dev](https://github.com/destinyai-dev).
 
-## Créditos
+## Créditos do projeto original
 
-Este projeto é um fork do [Postiz](https://github.com/gitroomhq/postiz-app), desenvolvido pela equipe do GitRoom HQ, licenciado sob AGPL-3.0.
+O DestinyPost é baseado no [Postiz](https://github.com/gitroomhq/postiz-app), desenvolvido pela equipe GitRoom HQ e licenciado sob a AGPL-3.0. Os avisos de copyright, o histórico aplicável e os termos da licença do projeto original são preservados.
 
-O código original foi modificado para atender as necessidades da comunidade Automação Sem Limites. Todas as modificações também são licenciadas sob AGPL-3.0.
-
-## Licença
-
-[AGPL-3.0](LICENSE)
+As modificações do DestinyPost também são distribuídas sob a [AGPL-3.0](LICENSE).

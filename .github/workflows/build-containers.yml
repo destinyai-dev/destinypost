@@ -62,12 +62,12 @@ jobs:
         run: |
           docker buildx build --platform linux/${{ matrix.arch }} \
             -f Dockerfile.dev \
-            -t ghcr.io/maiconramos/robo-multipost:${{ env.CONTAINERVER }}-${{ matrix.arch }} \
+            -t ghcr.io/destinyai-dev/destinypost:${{ env.CONTAINERVER }}-${{ matrix.arch }} \
             --build-arg NEXT_PUBLIC_VERSION=${{ env.NEXT_PUBLIC_VERSION }} \
             --pull \
             --no-cache \
             --provenance=false --sbom=false \
-            --output "type=registry,name=ghcr.io/maiconramos/robo-multipost:${{ env.CONTAINERVER }}-${{ matrix.arch }}" .
+            --output "type=registry,name=ghcr.io/destinyai-dev/destinypost:${{ env.CONTAINERVER }}-${{ matrix.arch }}" .
 
   build-container-manifest:
     needs: [build-containers, build-containers-common]
@@ -86,58 +86,58 @@ jobs:
         run: |
           # Verify the architecture images
           echo "Verifying AMD64 image:"
-          docker buildx imagetools inspect ghcr.io/maiconramos/robo-multipost:${{ env.CONTAINERVER }}-amd64
+          docker buildx imagetools inspect ghcr.io/destinyai-dev/destinypost:${{ env.CONTAINERVER }}-amd64
 
           echo "Verifying ARM64 image:"
-          docker buildx imagetools inspect ghcr.io/maiconramos/robo-multipost:${{ env.CONTAINERVER }}-arm64
+          docker buildx imagetools inspect ghcr.io/destinyai-dev/destinypost:${{ env.CONTAINERVER }}-arm64
 
           # Try to remove any existing manifest first
-          docker manifest rm ghcr.io/maiconramos/robo-multipost:${{ env.CONTAINERVER }} || true
+          docker manifest rm ghcr.io/destinyai-dev/destinypost:${{ env.CONTAINERVER }} || true
 
           # Create and push the version-specific manifest
-          docker manifest create ghcr.io/maiconramos/robo-multipost:${{ env.CONTAINERVER }} \
-            --amend ghcr.io/maiconramos/robo-multipost:${{ env.CONTAINERVER }}-amd64 \
-            --amend ghcr.io/maiconramos/robo-multipost:${{ env.CONTAINERVER }}-arm64
+          docker manifest create ghcr.io/destinyai-dev/destinypost:${{ env.CONTAINERVER }} \
+            --amend ghcr.io/destinyai-dev/destinypost:${{ env.CONTAINERVER }}-amd64 \
+            --amend ghcr.io/destinyai-dev/destinypost:${{ env.CONTAINERVER }}-arm64
 
-          docker manifest push ghcr.io/maiconramos/robo-multipost:${{ env.CONTAINERVER }}
+          docker manifest push ghcr.io/destinyai-dev/destinypost:${{ env.CONTAINERVER }}
 
       - name: Create Latest Manifest
         if: needs.build-containers-common.outputs.is_prerelease == 'false'
         env:
           CONTAINERVER: ${{ needs.build-containers-common.outputs.containerver }}
         run: |
-          docker manifest rm ghcr.io/maiconramos/robo-multipost:latest || true
+          docker manifest rm ghcr.io/destinyai-dev/destinypost:latest || true
 
-          docker manifest create ghcr.io/maiconramos/robo-multipost:latest \
-            --amend ghcr.io/maiconramos/robo-multipost:${{ env.CONTAINERVER }}-amd64 \
-            --amend ghcr.io/maiconramos/robo-multipost:${{ env.CONTAINERVER }}-arm64
+          docker manifest create ghcr.io/destinyai-dev/destinypost:latest \
+            --amend ghcr.io/destinyai-dev/destinypost:${{ env.CONTAINERVER }}-amd64 \
+            --amend ghcr.io/destinyai-dev/destinypost:${{ env.CONTAINERVER }}-arm64
 
-          docker manifest push ghcr.io/maiconramos/robo-multipost:latest
+          docker manifest push ghcr.io/destinyai-dev/destinypost:latest
 
       - name: Create Prerelease Manifest
         if: needs.build-containers-common.outputs.is_prerelease == 'true'
         env:
           CONTAINERVER: ${{ needs.build-containers-common.outputs.containerver }}
         run: |
-          docker manifest rm ghcr.io/maiconramos/robo-multipost:prerelease || true
+          docker manifest rm ghcr.io/destinyai-dev/destinypost:prerelease || true
 
-          docker manifest create ghcr.io/maiconramos/robo-multipost:prerelease \
-            --amend ghcr.io/maiconramos/robo-multipost:${{ env.CONTAINERVER }}-amd64 \
-            --amend ghcr.io/maiconramos/robo-multipost:${{ env.CONTAINERVER }}-arm64
+          docker manifest create ghcr.io/destinyai-dev/destinypost:prerelease \
+            --amend ghcr.io/destinyai-dev/destinypost:${{ env.CONTAINERVER }}-amd64 \
+            --amend ghcr.io/destinyai-dev/destinypost:${{ env.CONTAINERVER }}-arm64
 
-          docker manifest push ghcr.io/maiconramos/robo-multipost:prerelease
+          docker manifest push ghcr.io/destinyai-dev/destinypost:prerelease
 
       - name: Verify Manifests
         env:
           CONTAINERVER: ${{ needs.build-containers-common.outputs.containerver }}
         run: |
           echo "Version manifest:"
-          docker manifest inspect ghcr.io/maiconramos/robo-multipost:${{ env.CONTAINERVER }}
+          docker manifest inspect ghcr.io/destinyai-dev/destinypost:${{ env.CONTAINERVER }}
 
           if [ "${{ needs.build-containers-common.outputs.is_prerelease }}" = "false" ]; then
             echo "Latest manifest:"
-            docker manifest inspect ghcr.io/maiconramos/robo-multipost:latest
+            docker manifest inspect ghcr.io/destinyai-dev/destinypost:latest
           else
             echo "Prerelease manifest:"
-            docker manifest inspect ghcr.io/maiconramos/robo-multipost:prerelease
+            docker manifest inspect ghcr.io/destinyai-dev/destinypost:prerelease
           fi

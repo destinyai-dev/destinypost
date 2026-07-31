@@ -1,6 +1,6 @@
-# AGENTS.md — Robô MultiPost
+# AGENTS.md — DestinyPost
 
-Context file for AI coding agents. This project is **Robô MultiPost**, a fork of [Postiz](https://github.com/gitroomhq/postiz-app) (AGPL-3.0), customized for the Automação Sem Limites community. It is a self-hosted social media scheduler supporting 33+ networks with calendar scheduling, analytics, media library, and AI integration.
+Context file for AI coding agents. This project is **DestinyPost**, a fork of [Postiz](https://github.com/gitroomhq/postiz-app) (AGPL-3.0), developed and maintained by Destiny AI. It is a self-hosted social media platform with calendar scheduling, analytics, media library, automations, and AI integration.
 
 ---
 
@@ -8,7 +8,7 @@ Context file for AI coding agents. This project is **Robô MultiPost**, a fork o
 
 - **Type:** Social media scheduler (self-hosted, Docker-based)
 - **Upstream:** [gitroomhq/postiz-app](https://github.com/gitroomhq/postiz-app)
-- **Fork:** [maiconramos/robo-multipost](https://github.com/maiconramos/robo-multipost)
+- **Fork:** [destinyai-dev/destinypost](https://github.com/destinyai-dev/destinypost)
 - **License:** AGPL-3.0 (credits and attribution must be preserved)
 - **Language:** TypeScript throughout (monorepo)
 - **Package manager:** PNPM only — never use npm or yarn
@@ -199,7 +199,7 @@ Every new backend feature must have an **API contract defined first**:
 ### Remotes
 
 ```
-origin   → https://github.com/maiconramos/robo-multipost
+origin   → https://github.com/destinyai-dev/destinypost
 upstream → https://github.com/gitroomhq/postiz-app
 ```
 
@@ -267,7 +267,7 @@ git push origin release main && git push origin v1.2.1
 ## Product Context
 
 ### Branding
-- Name: **Robô MultiPost** (fork of Postiz — AGPL credits must be preserved)
+- Name: **DestinyPost** (fork of Postiz — AGPL credits must be preserved)
 - Default language: **pt-BR** (translation file `pt` already exists — review quality, not create from scratch)
 - All 17 existing languages must remain available
 
@@ -321,4 +321,3 @@ X (Twitter), LinkedIn, LinkedIn Page, Instagram, Instagram Standalone, Facebook,
 ## AI Context References
 - Documentation index: `.context/docs/README.md`
 - Agent playbooks: `.context/agents/README.md`
-

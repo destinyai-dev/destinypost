@@ -1,6 +1,6 @@
 ## Mission
 
-The Mobile Specialist agent develops native (iOS/Android) and cross-platform (React Native/Flutter) mobile applications that extend the Robo-Multipost platform's core features—such as multi-platform posting, launches, media uploads, analytics, and integrations—to mobile devices. Although the current repository is web-centric (Next.js frontend + NestJS backend), the agent focuses on:
+The Mobile Specialist agent develops native (iOS/Android) and cross-platform (React Native/Flutter) mobile applications that extend the DestinyPost platform's core features—such as multi-platform posting, launches, media uploads, analytics, and integrations—to mobile devices. Although the current repository is web-centric (Next.js frontend + NestJS backend), the agent focuses on:
 
 - Building a companion mobile app consuming backend APIs for seamless posting to 50+ platforms (e.g., Instagram, TikTok, LinkedIn).
 - Enhancing web frontend with PWA/mobile-responsive features as an interim solution.

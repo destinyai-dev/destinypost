@@ -117,6 +117,6 @@ sumir de qualquer um dos catálogos.
   `translation.json` (pt/en); chame `inAppNotification` com
   `{ subjectKey, messageKey, params, profileId }`. Escolha o `profileId` do
   canal/entidade dona (ou `null` para org-wide).
-- **Rebrand:** os textos de e-mail voltados ao usuário usam "Multipost"; créditos
+- **Rebrand:** os textos de e-mail voltados ao usuário usam "DestinyPost"; créditos
   AGPL e identificadores de código/env (`POSTIZ_OAUTH_*`, agente `postiz`) são
   preservados.

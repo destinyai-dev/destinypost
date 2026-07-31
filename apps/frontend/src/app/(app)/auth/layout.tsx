@@ -41,7 +41,7 @@ export default async function AuthLayout({
           Over <span className="text-[42px] text-[#cd2628]">20,000+</span>{' '}
           Entrepreneurs use
           <br />
-          Robô MultiPost To Grow Their Social Presence
+          DestinyPost To Grow Their Social Presence
         </div>
         <TestimonialComponent />
       </div>

@@ -178,7 +178,7 @@ export class CredentialService {
     }
 
     const appAccessToken = `${appId}|${appSecret}`;
-    const verifyToken = creds?.webhookVerifyToken || 'multipost';
+    const verifyToken = creds?.webhookVerifyToken || 'destinypost';
 
     try {
       const params = new URLSearchParams({
@@ -446,7 +446,7 @@ export class CredentialService {
           headers: {
             'Authorization': `Basic ${encoded}`,
             'Content-Type': 'application/x-www-form-urlencoded',
-            'User-Agent': 'RoboMultipost/1.0',
+            'User-Agent': 'DestinyPost/1.0',
           },
           body: 'grant_type=client_credentials',
         });

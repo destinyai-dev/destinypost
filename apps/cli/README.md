@@ -1,14 +1,14 @@
-# @robo-multipost/agent
+# @destinyai-dev/destinypost-agent
 
-CLI/skill do **Robô MultiPost** para agentes de IA. Wrapper fino e sem dependências
+CLI/skill do **DestinyPost** para agentes de IA. Wrapper fino e sem dependências
 sobre a API pública (`/public/v1/*`) de uma instância **self-hosted**. Diferente do
 CLI oficial do Postiz, inclui as **automações de comentário (flows)**.
 
 ## Configuração
 
 ```bash
-export MULTIPOST_API_KEY="sua-chave-de-api"     # org ou perfil (Settings > Integrações)
-export MULTIPOST_API_URL="https://seu-backend"  # ex.: https://localmultipostapi.seu-dominio.com.br
+export DESTINYPOST_API_KEY="sua-chave-de-api"     # org ou perfil (Settings > Integrações)
+export DESTINYPOST_API_URL="https://seu-backend"  # ex.: https://post.seu-dominio.com.br
 ```
 
 (Também aceita `POSTIZ_API_KEY` / `POSTIZ_API_URL`, para compatibilidade com o skill upstream.)
@@ -17,29 +17,29 @@ export MULTIPOST_API_URL="https://seu-backend"  # ex.: https://localmultipostapi
 
 **Sem instalar (a partir deste repositório):**
 ```bash
-node apps/cli/bin/multipost.js help
-node apps/cli/bin/multipost.js is-connected
+node apps/cli/bin/destinypost-agent.js help
+node apps/cli/bin/destinypost-agent.js is-connected
 ```
 
-**Como comando global `multipost` (link local):**
+**Como comando global `destinypost-agent` (link local):**
 ```bash
-cd apps/cli && npm link        # cria o binário `multipost` no PATH
-multipost integrations:list
+cd apps/cli && npm link        # cria o binário `destinypost-agent` no PATH
+destinypost-agent integrations:list
 ```
 
 **Publicado no npm (opcional, futuro):** após publicar este pacote sob o seu escopo,
-qualquer máquina faz `npm install -g @robo-multipost/agent` e usa `multipost ...`.
+qualquer máquina faz `npm install -g @destinyai-dev/destinypost-agent` e usa `destinypost-agent ...`.
 
 ## Exemplos
 
 ```bash
-multipost profiles:list
-multipost integrations:list
-multipost posts:create --content "<p>Olá!</p>" --integrationId <ID> --type now
-multipost flows:create --json '{"name":"Receita","integrationId":"<ID>","keywords":["EU QUERO"],"dmButtonText":"Quero o link","dmButtonUrl":"https://exemplo.com"}'
+destinypost-agent profiles:list
+destinypost-agent integrations:list
+destinypost-agent posts:create --content "<p>Olá!</p>" --integrationId <ID> --type now
+destinypost-agent flows:create --json '{"name":"Receita","integrationId":"<ID>","keywords":["EU QUERO"],"dmButtonText":"Quero o link","dmButtonUrl":"https://exemplo.com"}'
 ```
 
-Veja `multipost help` para todos os comandos e `SKILL.md` para a referência completa.
+Veja `destinypost-agent help` para todos os comandos e `SKILL.md` para a referência completa.
 
 ## Uso com agentes de IA (Hermes, OpenClaw, Claude, etc.)
 
@@ -47,8 +47,8 @@ Funciona com **qualquer agente que execute comandos de shell**. O agente lê o
 `SKILL.md` para aprender os comandos e os executa, parseando o JSON de saída.
 
 Padrão geral:
-1. Garanta que `MULTIPOST_API_KEY` e `MULTIPOST_API_URL` estão no ambiente do agente.
-2. Garanta que o binário `multipost` está acessível (via `npm link`, caminho absoluto,
+1. Garanta que `DESTINYPOST_API_KEY` e `DESTINYPOST_API_URL` estão no ambiente do agente.
+2. Garanta que o binário `destinypost-agent` está acessível (via `npm link`, caminho absoluto,
    ou instalado).
 3. Forneça o `SKILL.md` ao agente (na pasta de skills dele, ou como contexto).
 4. Peça a tarefa em linguagem natural (ex.: "agende um post no Instagram para amanhã às 14h").
@@ -60,5 +60,5 @@ Padrão geral:
 - O `content` dos posts é HTML (`p`, `br`, `strong`, `u`, `a`, `ul`, `li`, `h1`-`h3`).
 - A `dmButtonUrl` dos flows precisa ser `https` pública.
 - Para o schema completo do corpo de posts/flows, use o Swagger em `<API_URL>/docs`.
-- O nome do pacote (`@robo-multipost/agent`) é um placeholder — ajuste para o seu
+- O nome do pacote (`@destinyai-dev/destinypost-agent`) é um placeholder — ajuste para o seu
   escopo npm antes de publicar.

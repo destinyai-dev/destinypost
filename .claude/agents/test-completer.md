@@ -338,7 +338,7 @@ service-under-test. Reference: `ai-text.service.spec.ts`,
 If zero files in scope, return `✅ No TDD gap detected across the
 provided file list.` and stop.
 
-## Output template (concrete example, Multipost-flavored)
+## Output template (concrete example, DestinyPost-flavored)
 
 Invoker says: *"Generate specs for the new Zernio Pinterest provider:
 `libraries/nestjs-libraries/src/integrations/social/zernio/zernio.pinterest.provider.ts`"*

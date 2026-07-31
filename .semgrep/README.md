@@ -1,4 +1,4 @@
-# Regras Semgrep — Robô MultiPost
+# Regras Semgrep — DestinyPost
 
 Regras custom derivadas da auditoria de segurança (ver [`../SECURITY_AUDIT.md`](../SECURITY_AUDIT.md)).
 Cobrem os padrões inseguros **recorrentes** encontrados no código, para virarem verificação contínua no CI.

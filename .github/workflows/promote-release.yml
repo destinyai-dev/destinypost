@@ -43,7 +43,7 @@ jobs:
         env:
           RC: ${{ inputs.rc_version }}
           STABLE: ${{ inputs.stable_version }}
-          IMAGE: ghcr.io/maiconramos/robo-multipost
+          IMAGE: ghcr.io/destinyai-dev/destinypost
         run: |
           echo "Promovendo ${IMAGE}:${RC} para ${IMAGE}:${STABLE} + :latest"
 
@@ -73,9 +73,9 @@ jobs:
           STABLE: ${{ inputs.stable_version }}
         run: |
           echo "Verificando manifest estavel:"
-          docker manifest inspect ghcr.io/maiconramos/robo-multipost:${STABLE}
+          docker manifest inspect ghcr.io/destinyai-dev/destinypost:${STABLE}
 
           echo "Verificando manifest latest:"
-          docker manifest inspect ghcr.io/maiconramos/robo-multipost:latest
+          docker manifest inspect ghcr.io/destinyai-dev/destinypost:latest
 
           echo "Promocao concluida com sucesso!"

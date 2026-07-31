@@ -1,9 +1,9 @@
 {
-  "name": "@robo-multipost/agent",
+  "name": "@destinyai-dev/destinypost-agent",
   "version": "0.1.0",
-  "description": "CLI/skill do Robô MultiPost para agentes de IA (posts, integrações, automações de comentário e mídia) — funciona em qualquer instância self-hosted.",
+  "description": "CLI/skill do DestinyPost para agentes de IA (posts, integrações, automações de comentário e mídia) — funciona em qualquer instância self-hosted.",
   "bin": {
-    "multipost": "bin/multipost.js"
+    "destinypost-agent": "bin/destinypost-agent.js"
   },
   "files": [
     "bin",
@@ -14,7 +14,7 @@
     "node": ">=20"
   },
   "keywords": [
-    "robo-multipost",
+    "destinypost",
     "postiz",
     "social media",
     "agent",
