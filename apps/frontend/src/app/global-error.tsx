@@ -2,14 +2,13 @@
 import * as Sentry from '@sentry/nextjs';
 import NextError from 'next/error';
 import { useEffect } from 'react';
-import { useVariables } from '@gitroom/react/helpers/variable.context';
 
 export default function GlobalError({
   error,
 }: {
   error: Error & { digest?: string };
 }) {
-  const { sentryDsn } = useVariables();
+  const sentryDsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 
   useEffect(() => {
     if (!sentryDsn) {
@@ -27,7 +26,7 @@ export default function GlobalError({
       lang: 'en',
     });
 
-  }, [error]);
+  }, [error, sentryDsn]);
   return (
     <html>
       <body>
