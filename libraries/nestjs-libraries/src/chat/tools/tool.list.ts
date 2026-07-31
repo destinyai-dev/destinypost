@@ -1,0 +1,33 @@
+import { IntegrationValidationTool } from '@gitroom/nestjs-libraries/chat/tools/integration.validation.tool';
+import { IntegrationTriggerTool } from '@gitroom/nestjs-libraries/chat/tools/integration.trigger.tool';
+import { IntegrationSchedulePostTool } from './integration.schedule.post';
+import { GenerateVideoOptionsTool } from '@gitroom/nestjs-libraries/chat/tools/generate.video.options.tool';
+import { VideoFunctionTool } from '@gitroom/nestjs-libraries/chat/tools/video.function.tool';
+import { GenerateVideoTool } from '@gitroom/nestjs-libraries/chat/tools/generate.video.tool';
+import { GenerateImageTool } from '@gitroom/nestjs-libraries/chat/tools/generate.image.tool';
+import { GenerateCarouselTool } from '@gitroom/nestjs-libraries/chat/tools/generate.carousel.tool';
+import { IntegrationListTool } from '@gitroom/nestjs-libraries/chat/tools/integration.list.tool';
+import { KnowledgeQueryTool } from '@gitroom/nestjs-libraries/chat/tools/knowledge.query.tool';
+import { WebSearchTool } from '@gitroom/nestjs-libraries/chat/tools/web-search.tool';
+import { ExtractUrlsTool } from '@gitroom/nestjs-libraries/chat/tools/extract-urls.tool';
+import { CreateCommentAutomationTool } from '@gitroom/nestjs-libraries/chat/tools/create.comment.automation.tool';
+import { ListCommentAutomationsTool } from '@gitroom/nestjs-libraries/chat/tools/list.comment.automations.tool';
+import { SetCommentAutomationStatusTool } from '@gitroom/nestjs-libraries/chat/tools/set.comment.automation.status.tool';
+
+export const toolList = [
+  IntegrationListTool,
+  IntegrationValidationTool,
+  IntegrationTriggerTool,
+  IntegrationSchedulePostTool,
+  GenerateVideoOptionsTool,
+  VideoFunctionTool,
+  GenerateVideoTool,
+  GenerateImageTool,
+  GenerateCarouselTool,
+  KnowledgeQueryTool,
+  WebSearchTool,
+  ExtractUrlsTool,
+  CreateCommentAutomationTool,
+  ListCommentAutomationsTool,
+  SetCommentAutomationStatusTool,
+];

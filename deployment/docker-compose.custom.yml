@@ -1,0 +1,17 @@
+services:
+  postiz:
+    image: robo-multipost:custom-prisma-v1
+    environment:
+      FONTCONFIG_FILE: /app/custom-fonts/fonts.conf
+      FONTCONFIG_PATH: /app/custom-fonts
+      PEXELS_API_KEY: ${PEXELS_API_KEY:-}
+      CANVA_CLIENT_ID: ${CANVA_CLIENT_ID:-}
+      CANVA_CLIENT_SECRET: ${CANVA_CLIENT_SECRET:-}
+      CANVA_REDIRECT_URI: ${CANVA_REDIRECT_URI:-}
+      CANVA_SCOPES: ${CANVA_SCOPES:-}
+    volumes:
+      - ./custom-build/current/apps/backend/dist:/app/apps/backend/dist:ro
+      - ./custom-build/current/apps/frontend/.next:/app/apps/frontend/.next:ro
+      - ./custom-build/current/apps/frontend/public:/app/apps/frontend/public:ro
+      - ./custom-build/current/apps/orchestrator/dist:/app/apps/orchestrator/dist:ro
+      - ./custom-build/current/fonts/fonts.conf:/app/custom-fonts/fonts.conf:ro

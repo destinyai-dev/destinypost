@@ -1,0 +1,261 @@
+import { AgentToolInterface } from '@gitroom/nestjs-libraries/chat/agent.tool.interface';
+import { createTool } from '@mastra/core/tools';
+import { z } from 'zod';
+import { Injectable } from '@nestjs/common';
+import { socialIntegrationList } from '@gitroom/nestjs-libraries/integrations/integration.manager';
+import { IntegrationService } from '@gitroom/nestjs-libraries/database/prisma/integrations/integration.service';
+import { PostsService } from '@gitroom/nestjs-libraries/database/prisma/posts/posts.service';
+import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
+import { AllProvidersSettings } from '@gitroom/nestjs-libraries/dtos/posts/providers-settings/all.providers.settings';
+import { validate } from 'class-validator';
+import { Integration } from '@prisma/client';
+import { checkAuth } from '@gitroom/nestjs-libraries/chat/auth.context';
+import { stripHtmlValidation } from '@gitroom/helpers/utils/strip.html.validation';
+import { readRequestContext } from '@gitroom/nestjs-libraries/chat/tools/tool.context.helper';
+import { weightedLength } from '@gitroom/helpers/utils/count.length';
+
+function countCharacters(text: string, type: string): number {
+  if (type !== 'x') {
+    return text.length;
+  }
+  return weightedLength(text);
+}
+
+// Settings values chegam do agent sempre como string (schema compatibility com
+// Gemini). Tentamos reidratar via JSON.parse — se for "true", "42", "[...]",
+// "{...}" volta o tipo nativo. Strings cruas ("video-id-xyz") nao sao JSON
+// validas e ficam intactas. Numeros como "42" sao parseaveis e voltam number.
+function tryParseJson(value: string): unknown {
+  if (typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  if (
+    trimmed === '' ||
+    (!/^[\[{]/.test(trimmed) &&
+      !/^(true|false|null)$/i.test(trimmed) &&
+      !/^-?\d/.test(trimmed))
+  ) {
+    return value;
+  }
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return value;
+  }
+}
+
+@Injectable()
+export class IntegrationSchedulePostTool implements AgentToolInterface {
+  constructor(
+    private _postsService: PostsService,
+    private _integrationService: IntegrationService
+  ) {}
+  name = 'integrationSchedulePostTool';
+
+  run() {
+    return createTool({
+      id: 'schedulePostTool',
+      description: `
+This tool allows you to schedule a post to a social media platform, based on integrationSchema tool.
+So for example:
+
+If the user want to post a post to LinkedIn with one comment
+- socialPost array length will be one
+- postsAndComments array length will be two (one for the post, one for the comment)
+
+If the user want to post 20 posts for facebook each in individual days without comments
+- socialPost array length will be 20
+- postsAndComments array length will be one
+
+If the tools return errors, you would need to rerun it with the right parameters, don't ask again, just run it
+`,
+      inputSchema: z.object({
+        socialPost: z
+          .array(
+            z.object({
+              integrationId: z
+                .string()
+                .describe('The id of the integration (not internal id)'),
+              isPremium: z
+                .boolean()
+                .describe(
+                  "If the integration is X, return if it's premium or not"
+                ),
+              date: z.string().describe('The date of the post in UTC time'),
+              shortLink: z
+                .boolean()
+                .describe(
+                  'If the post has a link inside, we can ask the user if they want to add a short link'
+                ),
+              type: z
+                .enum(['draft', 'schedule', 'now'])
+                .describe(
+                  'The type of the post, if we pass now, we should pass the current date also'
+                ),
+              postsAndComments: z
+                .array(
+                  z.object({
+                    content: z
+                      .string()
+                      .describe(
+                        "The content of the post, HTML, Each line must be wrapped in <p> here is the possible tags: h1, h2, h3, u, strong, li, ul, p (you can't have u and strong together)"
+                      ),
+                    attachments: z
+                      .array(z.string())
+                      .describe('The image of the post (URLS)'),
+                  })
+                )
+                .describe(
+                  'first item is the post, every other item is the comments'
+                ),
+              settings: z
+                .array(
+                  z.object({
+                    key: z
+                      .string()
+                      .describe('Name of the settings key to pass'),
+                    value: z
+                      .string()
+                      .describe(
+                        'Value of the key as a string. For complex values (objects, arrays, numbers, booleans) send a JSON-stringified representation — the backend will JSON.parse it transparently. For simple ids/labels, send the raw string. Always prefer the id then label if possible.'
+                      ),
+                  })
+                )
+                .describe(
+                  'This relies on the integrationSchema tool to get the settings [input:settings]'
+                ),
+            })
+          )
+          .describe('Individual post'),
+      }),
+      outputSchema: z.object({
+        output: z
+          .array(
+            z.object({
+              postId: z.string(),
+              integration: z.string(),
+            })
+          )
+          .or(z.object({ errors: z.string() })),
+      }),
+      execute: async (input: any, options: any) => {
+        checkAuth(input, options);
+        const requestContext = readRequestContext(options);
+        const organizationId = JSON.parse(
+          requestContext.get('organization') as string
+        ).id;
+        const profileId =
+          (requestContext.get('profileId') as string) || undefined;
+        const finalOutput = [];
+
+        const integrations = {} as Record<string, Integration>;
+        for (const platform of input.socialPost) {
+          integrations[platform.integrationId] =
+            await this._integrationService.getIntegrationById(
+              organizationId,
+              platform.integrationId
+            );
+
+          if (profileId && integrations[platform.integrationId]?.profileId &&
+              integrations[platform.integrationId].profileId !== profileId) {
+            throw new Error('Integration does not belong to the active profile');
+          }
+
+          const { dto, maxLength, identifier } = socialIntegrationList.find(
+            (p) =>
+              p.identifier ===
+              integrations[platform.integrationId].providerIdentifier
+          )!;
+
+          if (dto) {
+            const newDTO = new dto();
+            const obj = Object.assign(
+              newDTO,
+              platform.settings.reduce(
+                (acc, s) => ({
+                  ...acc,
+                  [s.key]: s.value,
+                }),
+                {} as AllProvidersSettings
+              )
+            );
+            const errors = await validate(obj);
+            if (errors.length) {
+              return {
+                errors: JSON.stringify(errors),
+              };
+            }
+
+            const errorsLength = [];
+            for (const post of platform.postsAndComments) {
+              const maximumCharacters = maxLength(platform.isPremium);
+              const strip = stripHtmlValidation('normal', post.content, true);
+              const weightedLength = countCharacters(strip, identifier || '');
+              const totalCharacters =
+                weightedLength > strip.length ? weightedLength : strip.length;
+
+              if (totalCharacters > (maximumCharacters || 1000000)) {
+                errorsLength.push({
+                  value: post.content,
+                  error: `The maximum characters is ${maximumCharacters}, we got ${totalCharacters}, please fix it, and try integrationSchedulePostTool again.`,
+                });
+              }
+            }
+
+            if (errorsLength.length) {
+              return {
+                errors: JSON.stringify(errorsLength),
+              };
+            }
+          }
+        }
+
+        for (const post of input.socialPost) {
+          const integration = integrations[post.integrationId];
+
+          if (!integration) {
+            throw new Error('Integration not found');
+          }
+
+          const output = await this._postsService.createPost(organizationId, {
+            date: post.date,
+            type: post.type as 'draft' | 'schedule' | 'now',
+            shortLink: post.shortLink,
+            tags: [],
+            posts: [
+              {
+                integration,
+                group: makeId(10),
+                settings: post.settings.reduce(
+                  (acc, s) => ({
+                    ...acc,
+                    // Schema declara value como string (compatibilidade Gemini);
+                    // tentamos JSON.parse para reidratar arrays/objects/numbers/booleans.
+                    // Falha de parse → mantemos como string crua.
+                    [s.key]: tryParseJson(s.value),
+                  }),
+                  {
+                    __type: integration.providerIdentifier,
+                  } as AllProvidersSettings
+                ),
+                value: post.postsAndComments.map((p) => ({
+                  content: p.content,
+                  id: makeId(10),
+                  delay: 0,
+                  image: p.attachments.map((p) => ({
+                    id: makeId(10),
+                    path: p,
+                  })),
+                })),
+              },
+            ],
+          }, profileId);
+          finalOutput.push(...output);
+        }
+
+        return {
+          output: finalOutput,
+        };
+      },
+    });
+  }
+}

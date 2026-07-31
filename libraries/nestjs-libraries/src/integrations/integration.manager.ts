@@ -1,0 +1,312 @@
+import 'reflect-metadata';
+
+import { Injectable, Optional } from '@nestjs/common';
+import { CredentialService } from '@gitroom/nestjs-libraries/database/prisma/credentials/credential.service';
+import { XProvider } from '@gitroom/nestjs-libraries/integrations/social/x.provider';
+import { SocialProvider } from '@gitroom/nestjs-libraries/integrations/social/social.integrations.interface';
+import { LinkedinProvider } from '@gitroom/nestjs-libraries/integrations/social/linkedin.provider';
+import { RedditProvider } from '@gitroom/nestjs-libraries/integrations/social/reddit.provider';
+import { DevToProvider } from '@gitroom/nestjs-libraries/integrations/social/dev.to.provider';
+import { HashnodeProvider } from '@gitroom/nestjs-libraries/integrations/social/hashnode.provider';
+import { MediumProvider } from '@gitroom/nestjs-libraries/integrations/social/medium.provider';
+import { FacebookProvider } from '@gitroom/nestjs-libraries/integrations/social/facebook.provider';
+import { InstagramProvider } from '@gitroom/nestjs-libraries/integrations/social/instagram.provider';
+import { YoutubeProvider } from '@gitroom/nestjs-libraries/integrations/social/youtube.provider';
+import { TiktokProvider } from '@gitroom/nestjs-libraries/integrations/social/tiktok.provider';
+import { PinterestProvider } from '@gitroom/nestjs-libraries/integrations/social/pinterest.provider';
+import { DribbbleProvider } from '@gitroom/nestjs-libraries/integrations/social/dribbble.provider';
+import { LinkedinPageProvider } from '@gitroom/nestjs-libraries/integrations/social/linkedin.page.provider';
+import { ThreadsProvider } from '@gitroom/nestjs-libraries/integrations/social/threads.provider';
+import { DiscordProvider } from '@gitroom/nestjs-libraries/integrations/social/discord.provider';
+import { SlackProvider } from '@gitroom/nestjs-libraries/integrations/social/slack.provider';
+import { MastodonProvider } from '@gitroom/nestjs-libraries/integrations/social/mastodon.provider';
+import { BlueskyProvider } from '@gitroom/nestjs-libraries/integrations/social/bluesky.provider';
+import { LemmyProvider } from '@gitroom/nestjs-libraries/integrations/social/lemmy.provider';
+import { InstagramStandaloneProvider } from '@gitroom/nestjs-libraries/integrations/social/instagram.standalone.provider';
+import { FarcasterProvider } from '@gitroom/nestjs-libraries/integrations/social/farcaster.provider';
+import { TelegramProvider } from '@gitroom/nestjs-libraries/integrations/social/telegram.provider';
+import { NostrProvider } from '@gitroom/nestjs-libraries/integrations/social/nostr.provider';
+import { VkProvider } from '@gitroom/nestjs-libraries/integrations/social/vk.provider';
+import { WordpressProvider } from '@gitroom/nestjs-libraries/integrations/social/wordpress.provider';
+import { ListmonkProvider } from '@gitroom/nestjs-libraries/integrations/social/listmonk.provider';
+import { GmbProvider } from '@gitroom/nestjs-libraries/integrations/social/gmb.provider';
+import { KickProvider } from '@gitroom/nestjs-libraries/integrations/social/kick.provider';
+import { TwitchProvider } from '@gitroom/nestjs-libraries/integrations/social/twitch.provider';
+import { SocialAbstract } from '@gitroom/nestjs-libraries/integrations/social.abstract';
+import { MoltbookProvider } from '@gitroom/nestjs-libraries/integrations/social/moltbook.provider';
+import { SkoolProvider } from '@gitroom/nestjs-libraries/integrations/social/skool.provider';
+import { WhopProvider } from '@gitroom/nestjs-libraries/integrations/social/whop.provider';
+import { MeweProvider } from '@gitroom/nestjs-libraries/integrations/social/mewe.provider';
+import { ZernioTikTokProvider } from '@gitroom/nestjs-libraries/integrations/social/zernio-tiktok.provider';
+import { ZernioPinterestProvider } from '@gitroom/nestjs-libraries/integrations/social/zernio-pinterest.provider';
+import { ZernioTwitterProvider } from '@gitroom/nestjs-libraries/integrations/social/zernio-twitter.provider';
+import { ZernioInstagramProvider } from '@gitroom/nestjs-libraries/integrations/social/zernio-instagram.provider';
+import { ZernioYoutubeProvider } from '@gitroom/nestjs-libraries/integrations/social/zernio-youtube.provider';
+import { ZernioFacebookProvider } from '@gitroom/nestjs-libraries/integrations/social/zernio-facebook.provider';
+import { ZernioLinkedinProvider } from '@gitroom/nestjs-libraries/integrations/social/zernio-linkedin.provider';
+import { ZernioRedditProvider } from '@gitroom/nestjs-libraries/integrations/social/zernio-reddit.provider';
+import { ZernioBlueskyProvider } from '@gitroom/nestjs-libraries/integrations/social/zernio-bluesky.provider';
+import { ZernioThreadsProvider } from '@gitroom/nestjs-libraries/integrations/social/zernio-threads.provider';
+import { ZernioTelegramProvider } from '@gitroom/nestjs-libraries/integrations/social/zernio-telegram.provider';
+import { ZernioGoogleBusinessProvider } from '@gitroom/nestjs-libraries/integrations/social/zernio-googlebusiness.provider';
+import { ZernioSnapchatProvider } from '@gitroom/nestjs-libraries/integrations/social/zernio-snapchat.provider';
+
+export const socialIntegrationList: Array<SocialAbstract & SocialProvider> = [
+  new XProvider(),
+  new LinkedinProvider(),
+  new LinkedinPageProvider(),
+  new RedditProvider(),
+  new InstagramProvider(),
+  new InstagramStandaloneProvider(),
+  new FacebookProvider(),
+  new ThreadsProvider(),
+  new YoutubeProvider(),
+  new GmbProvider(),
+  new TiktokProvider(),
+  new PinterestProvider(),
+  new DribbbleProvider(),
+  new DiscordProvider(),
+  new SlackProvider(),
+  new KickProvider(),
+  new TwitchProvider(),
+  new MastodonProvider(),
+  new BlueskyProvider(),
+  new LemmyProvider(),
+  new FarcasterProvider(),
+  new TelegramProvider(),
+  new NostrProvider(),
+  new VkProvider(),
+  new MediumProvider(),
+  new DevToProvider(),
+  new HashnodeProvider(),
+  new WordpressProvider(),
+  new ListmonkProvider(),
+  new MoltbookProvider(),
+  new WhopProvider(),
+  new SkoolProvider(),
+  new MeweProvider(),
+  // new MastodonCustomProvider(),
+  new ZernioTikTokProvider(),
+  new ZernioPinterestProvider(),
+  new ZernioTwitterProvider(),
+  new ZernioInstagramProvider(),
+  new ZernioYoutubeProvider(),
+  new ZernioFacebookProvider(),
+  new ZernioLinkedinProvider(),
+  new ZernioRedditProvider(),
+  new ZernioBlueskyProvider(),
+  new ZernioThreadsProvider(),
+  new ZernioTelegramProvider(),
+  new ZernioGoogleBusinessProvider(),
+  new ZernioSnapchatProvider(),
+];
+
+const facebookCreds = {
+  clientId: 'FACEBOOK_APP_ID',
+  clientSecret: 'FACEBOOK_APP_SECRET',
+};
+
+const linkedinCreds = {
+  clientId: 'LINKEDIN_CLIENT_ID',
+  clientSecret: 'LINKEDIN_CLIENT_SECRET',
+};
+
+const ENV_MAPPING: Record<string, Record<string, string>> = {
+  facebook: facebookCreds,
+  instagram: facebookCreds,
+  'instagram-standalone': facebookCreds,
+  threads: facebookCreds,
+  tiktok: {
+    clientId: 'TIKTOK_CLIENT_ID',
+    clientSecret: 'TIKTOK_CLIENT_SECRET',
+  },
+  pinterest: {
+    clientId: 'PINTEREST_CLIENT_ID',
+    clientSecret: 'PINTEREST_CLIENT_SECRET',
+  },
+  linkedin: linkedinCreds,
+  'linkedin-page': linkedinCreds,
+  x: { clientId: 'X_API_KEY', clientSecret: 'X_API_SECRET' },
+  youtube: {
+    clientId: 'YOUTUBE_CLIENT_ID',
+    clientSecret: 'YOUTUBE_CLIENT_SECRET',
+  },
+  reddit: {
+    clientId: 'REDDIT_CLIENT_ID',
+    clientSecret: 'REDDIT_CLIENT_SECRET',
+  },
+  discord: {
+    clientId: 'DISCORD_CLIENT_ID',
+    clientSecret: 'DISCORD_CLIENT_SECRET',
+    botToken: 'DISCORD_BOT_TOKEN_ID',
+  },
+  slack: {
+    clientId: 'SLACK_ID',
+    clientSecret: 'SLACK_SECRET',
+    signingSecret: 'SLACK_SIGNING_SECRET',
+  },
+};
+
+// Map provider identifiers to their credential key in the DB
+// (e.g., instagram → facebook, since they share the same OAuth app)
+const CREDENTIAL_ALIAS: Record<string, string> = {
+  instagram: 'facebook',
+  'instagram-standalone': 'facebook',
+  threads: 'facebook',
+  'linkedin-page': 'linkedin',
+  x: 'twitter',
+};
+
+@Injectable()
+export class IntegrationManager {
+  constructor(
+    @Optional() private _credentialService?: CredentialService
+  ) {}
+
+  async getProviderCredentials(
+    provider: string,
+    organizationId: string,
+    profileId?: string
+  ): Promise<Record<string, string> | undefined> {
+    // Resolve alias (e.g., instagram → facebook for DB lookup)
+    const credentialKey = CREDENTIAL_ALIAS[provider] || provider;
+
+    if (this._credentialService) {
+      const dbCredentials = await this._credentialService.getRawShared(
+        organizationId,
+        credentialKey,
+        profileId
+      );
+      if (dbCredentials) {
+        return dbCredentials;
+      }
+    }
+
+    const mapping = ENV_MAPPING[provider];
+    if (!mapping) return undefined;
+
+    const envCredentials: Record<string, string> = {};
+    let hasAny = false;
+    for (const [key, envVar] of Object.entries(mapping)) {
+      const value = process.env[envVar] || '';
+      if (value) hasAny = true;
+      envCredentials[key] = value;
+    }
+
+    return hasAny ? envCredentials : undefined;
+  }
+
+  async getAllIntegrations() {
+    const visibleProviders = socialIntegrationList.filter(
+      (p) => !p.hiddenFromList
+    );
+
+    const social = await Promise.all(
+      visibleProviders.map(async (p) => ({
+        name: p.name,
+        identifier: p.identifier,
+        toolTip: p.toolTip,
+        editor: p.editor,
+        isExternal: !!p.externalUrl,
+        isWeb3: !!p.isWeb3,
+        isChromeExtension: !!p.isChromeExtension,
+        ...(p.extensionCookies
+          ? { extensionCookies: p.extensionCookies }
+          : {}),
+        ...(p.customFields ? { customFields: await p.customFields() } : {}),
+      }))
+    );
+
+    // Add virtual "Zernio" entry for the unified Zernio connector
+    social.push({
+      name: 'Zernio',
+      identifier: 'zernio',
+      toolTip: undefined,
+      editor: 'normal' as const,
+      isExternal: false,
+      isWeb3: false,
+      isChromeExtension: false,
+    });
+
+    return {
+      social,
+      article: [] as any[],
+    };
+  }
+
+  getAllTools(): {
+    [key: string]: {
+      description: string;
+      dataSchema: any;
+      methodName: string;
+    }[];
+  } {
+    return socialIntegrationList.reduce(
+      (all, current) => ({
+        ...all,
+        [current.identifier]:
+          Reflect.getMetadata('custom:tool', current.constructor.prototype) ||
+          [],
+      }),
+      {}
+    );
+  }
+
+  getAllRulesDescription(): {
+    [key: string]: string;
+  } {
+    return socialIntegrationList.reduce(
+      (all, current) => ({
+        ...all,
+        [current.identifier]:
+          Reflect.getMetadata(
+            'custom:rules:description',
+            current.constructor
+          ) || '',
+      }),
+      {}
+    );
+  }
+
+  getAllPlugs() {
+    return socialIntegrationList
+      .map((p) => {
+        return {
+          name: p.name,
+          identifier: p.identifier,
+          plugs: (
+            Reflect.getMetadata('custom:plug', p.constructor.prototype) || []
+          )
+            .filter((f: any) => !f.disabled)
+            .map((p: any) => ({
+              ...p,
+              fields: p.fields.map((c: any) => ({
+                ...c,
+                validation: c?.validation?.toString(),
+              })),
+            })),
+        };
+      })
+      .filter((f) => f.plugs.length);
+  }
+
+  getInternalPlugs(providerName: string) {
+    const p = socialIntegrationList.find((p) => p.identifier === providerName)!;
+    return {
+      internalPlugs:
+        (
+          Reflect.getMetadata(
+            'custom:internal_plug',
+            p.constructor.prototype
+          ) || []
+        ).filter((f: any) => !f.disabled) || [],
+    };
+  }
+
+  getAllowedSocialsIntegrations() {
+    return socialIntegrationList.map((p) => p.identifier);
+  }
+  getSocialIntegration(integration: string): SocialProvider {
+    return socialIntegrationList.find((i) => i.identifier === integration)!;
+  }
+}

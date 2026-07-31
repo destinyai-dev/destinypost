@@ -1,0 +1,1137 @@
+import {
+  BadRequestException,
+  HttpException,
+  Injectable,
+  ValidationPipe,
+} from '@nestjs/common';
+import { PostsRepository } from '@gitroom/nestjs-libraries/database/prisma/posts/posts.repository';
+import { CreatePostDto } from '@gitroom/nestjs-libraries/dtos/posts/create.post.dto';
+import dayjs from 'dayjs';
+import { IntegrationManager } from '@gitroom/nestjs-libraries/integrations/integration.manager';
+import {
+  CommentKind,
+  Integration,
+  Post,
+  Media,
+  From,
+  State,
+} from '@prisma/client';
+import { GetPostsDto } from '@gitroom/nestjs-libraries/dtos/posts/get.posts.dto';
+import { GetPostsListDto } from '@gitroom/nestjs-libraries/dtos/posts/get.posts.list.dto';
+import { shuffle } from 'lodash';
+import { CreateGeneratedPostsDto } from '@gitroom/nestjs-libraries/dtos/generator/create.generated.posts.dto';
+import { IntegrationService } from '@gitroom/nestjs-libraries/database/prisma/integrations/integration.service';
+import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
+import utc from 'dayjs/plugin/utc';
+import { MediaService } from '@gitroom/nestjs-libraries/database/prisma/media/media.service';
+import { ShortLinkService } from '@gitroom/nestjs-libraries/short-linking/short.link.service';
+import { CreateTagDto } from '@gitroom/nestjs-libraries/dtos/posts/create.tag.dto';
+import { minifyPostsList, minifyPosts } from '@gitroom/helpers/utils/posts.list.minify';
+import axios from 'axios';
+import sharp from 'sharp';
+import { UploadFactory } from '@gitroom/nestjs-libraries/upload/upload.factory';
+import { Readable } from 'stream';
+import { OpenaiService } from '@gitroom/nestjs-libraries/openai/openai.service';
+import { AiTextService } from '@gitroom/nestjs-libraries/ai/ai-text.service';
+dayjs.extend(utc);
+import * as Sentry from '@sentry/nestjs';
+import { TemporalService } from 'nestjs-temporal-core';
+import { TypedSearchAttributes } from '@temporalio/common';
+import {
+  organizationId,
+  postId as postIdSearchParam,
+} from '@gitroom/nestjs-libraries/temporal/temporal.search.attribute';
+import { AnalyticsData } from '@gitroom/nestjs-libraries/integrations/social/social.integrations.interface';
+import { timer } from '@gitroom/helpers/utils/timer';
+import { ioRedis } from '@gitroom/nestjs-libraries/redis/redis.service';
+import { RefreshToken } from '@gitroom/nestjs-libraries/integrations/social.abstract';
+import { RefreshIntegrationService } from '@gitroom/nestjs-libraries/integrations/refresh.integration.service';
+import { StatusEventService } from '@gitroom/nestjs-libraries/database/prisma/status/status-event.service';
+import { EncryptionService } from '@gitroom/nestjs-libraries/crypto/encryption.service';
+import { decryptIntegrationToken } from '@gitroom/nestjs-libraries/crypto/integration-token.helper';
+
+type PostWithConditionals = Post & {
+  integration?: Integration;
+  childrenPost: Post[];
+};
+
+@Injectable()
+export class PostsService {
+  private storage = UploadFactory.createStorage();
+  constructor(
+    private _postRepository: PostsRepository,
+    private _integrationManager: IntegrationManager,
+    private _integrationService: IntegrationService,
+    private _mediaService: MediaService,
+    private _shortLinkService: ShortLinkService,
+    private _openaiService: OpenaiService,
+    private _temporalService: TemporalService,
+    private _refreshIntegrationService: RefreshIntegrationService,
+    private _aiTextService: AiTextService,
+    private _encryption: EncryptionService,
+    private _statusEventService: StatusEventService
+  ) {}
+
+  searchForMissingThreeHoursPosts() {
+    return this._postRepository.searchForMissingThreeHoursPosts();
+  }
+
+  updatePost(id: string, postId: string, releaseURL: string) {
+    return this._postRepository.updatePost(id, postId, releaseURL);
+  }
+
+  getPostById(id: string) {
+    return this._postRepository.getPostById(id);
+  }
+
+  async getMissingContent(
+    orgId: string,
+    postId: string,
+    forceRefresh = false
+  ): Promise<{ id: string; url: string }[]> {
+    const post = await this._postRepository.getPostById(postId, orgId);
+    if (!post || post.releaseId !== 'missing') {
+      return [];
+    }
+
+    const integrationProvider = this._integrationManager.getSocialIntegration(
+      post.integration.providerIdentifier
+    );
+
+    if (!integrationProvider.missing) {
+      return [];
+    }
+
+    const getIntegration = post.integration!;
+
+    if (
+      dayjs(getIntegration?.tokenExpiration).isBefore(dayjs()) ||
+      forceRefresh
+    ) {
+      const data = await this._refreshIntegrationService.refresh(
+        getIntegration
+      );
+      if (!data) {
+        return [];
+      }
+
+      const { accessToken } = data;
+
+      if (accessToken) {
+        getIntegration.token = accessToken;
+
+        if (integrationProvider.refreshWait) {
+          await timer(10000);
+        }
+      } else {
+        await this._integrationService.disconnectChannel(orgId, getIntegration);
+        return [];
+      }
+    }
+
+    getIntegration.token = decryptIntegrationToken(
+      this._encryption,
+      getIntegration.token
+    );
+    try {
+      return await integrationProvider.missing(
+        getIntegration.internalId,
+        getIntegration.token
+      );
+    } catch (e) {
+      console.log(e);
+      if (e instanceof RefreshToken) {
+        return this.getMissingContent(orgId, postId, true);
+      }
+    }
+
+    return [];
+  }
+
+  async updateReleaseId(orgId: string, postId: string, releaseId: string) {
+    return this._postRepository.updateReleaseId(postId, orgId, releaseId);
+  }
+
+  async checkPostAnalytics(
+    orgId: string,
+    postId: string,
+    date: number,
+    forceRefresh = false,
+    profileId?: string
+  ): Promise<AnalyticsData[] | { missing: true }> {
+    const post = await this._postRepository.getPostById(postId, orgId);
+    if (!post || !post.releaseId) {
+      return [];
+    }
+
+    if (profileId && post.profileId && post.profileId !== profileId) {
+      return [];
+    }
+
+    if (post.releaseId === 'missing') {
+      return { missing: true };
+    }
+
+    const integrationProvider = this._integrationManager.getSocialIntegration(
+      post.integration.providerIdentifier
+    );
+
+    if (!integrationProvider.postAnalytics) {
+      return [];
+    }
+
+    const getIntegration = post.integration!;
+
+    if (
+      dayjs(getIntegration?.tokenExpiration).isBefore(dayjs()) ||
+      forceRefresh
+    ) {
+      const data = await this._refreshIntegrationService.refresh(
+        getIntegration
+      );
+      if (!data) {
+        return [];
+      }
+
+      const { accessToken } = data;
+
+      if (accessToken) {
+        getIntegration.token = accessToken;
+
+        if (integrationProvider.refreshWait) {
+          await timer(10000);
+        }
+      } else {
+        await this._integrationService.disconnectChannel(orgId, getIntegration);
+        return [];
+      }
+    }
+
+    // const getIntegrationData = await ioRedis.get(
+    //   `integration:${orgId}:${post.id}:${date}`
+    // );
+    // if (getIntegrationData) {
+    //   return JSON.parse(getIntegrationData);
+    // }
+
+    getIntegration.token = decryptIntegrationToken(
+      this._encryption,
+      getIntegration.token
+    );
+    try {
+      const loadAnalytics = await integrationProvider.postAnalytics(
+        getIntegration.internalId,
+        getIntegration.token,
+        post.releaseId,
+        date,
+        getIntegration
+      );
+      await ioRedis.set(
+        `integration:${orgId}:${post.id}:${date}`,
+        JSON.stringify(loadAnalytics),
+        'EX',
+        !process.env.NODE_ENV || process.env.NODE_ENV === 'development'
+          ? 1
+          : 3600
+      );
+      return loadAnalytics;
+    } catch (e) {
+      console.log(e);
+      if (e instanceof RefreshToken) {
+        return this.checkPostAnalytics(orgId, postId, date, true, profileId);
+      }
+    }
+
+    return [];
+  }
+
+  async getStatistics(orgId: string, id: string) {
+    const getPost = await this.getPostsRecursively(id, true, orgId, true);
+    const content = getPost.map((p) => p.content);
+    const shortLinksTracking = await this._shortLinkService.getStatistics(
+      content
+    );
+
+    return {
+      clicks: shortLinksTracking,
+    };
+  }
+
+  async mapTypeToPost(
+    body: CreatePostDto,
+    organization: string,
+    replaceDraft: boolean = false
+  ): Promise<CreatePostDto> {
+    if (!body?.posts?.every((p) => p?.integration?.id)) {
+      throw new BadRequestException('All posts must have an integration id');
+    }
+
+    const mappedValues = {
+      ...body,
+      type: replaceDraft ? 'schedule' : body.type,
+      posts: await Promise.all(
+        body.posts.map(async (post) => {
+          const integration = await this._integrationService.getIntegrationById(
+            organization,
+            post.integration.id
+          );
+
+          if (!integration) {
+            throw new BadRequestException(
+              `Integration with id ${post.integration.id} not found`
+            );
+          }
+
+          return {
+            type: replaceDraft ? 'schedule' : body.type,
+            ...post,
+            settings: {
+              ...(post.settings || ({} as any)),
+              __type: integration.providerIdentifier,
+            },
+          };
+        })
+      ),
+    };
+
+    const validationPipe = new ValidationPipe({
+      skipMissingProperties: false,
+      transform: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+    });
+
+    return await validationPipe.transform(mappedValues, {
+      type: 'body',
+      metatype: CreatePostDto,
+    });
+  }
+
+  async getPostsRecursively(
+    id: string,
+    includeIntegration = false,
+    orgId?: string,
+    isFirst?: boolean
+  ): Promise<PostWithConditionals[]> {
+    const post = await this._postRepository.getPost(
+      id,
+      includeIntegration,
+      orgId,
+      isFirst
+    );
+
+    if (!post) {
+      return [];
+    }
+
+    return [
+      post!,
+      ...(post?.childrenPost?.length
+        ? await this.getPostsRecursively(
+            post?.childrenPost?.[0]?.id,
+            false,
+            orgId,
+            false
+          )
+        : []),
+    ];
+  }
+
+  async getPosts(orgId: string, query: GetPostsDto, profileId?: string) {
+    return this._postRepository.getPosts(orgId, query, profileId);
+  }
+
+  async getPostsMinified(orgId: string, query: GetPostsDto, profileId?: string) {
+    return minifyPosts({
+      posts: await this._postRepository.getPosts(orgId, query, profileId),
+    });
+  }
+
+  async getPostsList(orgId: string, query: GetPostsListDto, profileId?: string) {
+    return minifyPostsList(
+      await this._postRepository.getPostsList(orgId, query, profileId)
+    );
+  }
+
+  async updateMedia(id: string, imagesList: any[], convertToJPEG = false) {
+    try {
+      let imageUpdateNeeded = false;
+      const getImageList = await Promise.all(
+        (
+          await Promise.all(
+            (imagesList || []).map(async (p: any) => {
+              if (!p.path && p.id) {
+                imageUpdateNeeded = true;
+                return this._mediaService.getMediaById(p.id);
+              }
+
+              return p;
+            })
+          )
+        )
+          .map((m) => {
+            return {
+              ...m,
+              url:
+                m.path.indexOf('http') === -1
+                  ? process.env.FRONTEND_URL +
+                    '/' +
+                    process.env.NEXT_PUBLIC_UPLOAD_STATIC_DIRECTORY +
+                    m.path
+                  : m.path,
+              type: 'image',
+              path:
+                m.path.indexOf('http') === -1
+                  ? process.env.UPLOAD_DIRECTORY + m.path
+                  : m.path,
+            };
+          })
+          .map(async (m) => {
+            if (!convertToJPEG) {
+              return m;
+            }
+
+            if (m.path.indexOf('.png') > -1) {
+              imageUpdateNeeded = true;
+              const response = await axios.get(m.url, {
+                responseType: 'arraybuffer',
+              });
+
+              const imageBuffer = Buffer.from(response.data);
+
+              // Use sharp to get the metadata of the image
+              const buffer = await sharp(imageBuffer)
+                .jpeg({ quality: 100 })
+                .toBuffer();
+
+              const { path, originalname } = await this.storage.uploadFile({
+                buffer,
+                mimetype: 'image/jpeg',
+                size: buffer.length,
+                path: '',
+                fieldname: '',
+                destination: '',
+                stream: new Readable(),
+                filename: '',
+                originalname: '',
+                encoding: '',
+              });
+
+              return {
+                ...m,
+                name: originalname,
+                url:
+                  path.indexOf('http') === -1
+                    ? process.env.FRONTEND_URL +
+                      '/' +
+                      process.env.NEXT_PUBLIC_UPLOAD_STATIC_DIRECTORY +
+                      path
+                    : path,
+                type: 'image',
+                path:
+                  path.indexOf('http') === -1
+                    ? process.env.UPLOAD_DIRECTORY + path
+                    : path,
+              };
+            }
+
+            return m;
+          })
+      );
+
+      if (imageUpdateNeeded) {
+        await this._postRepository.updateImages(
+          id,
+          JSON.stringify(getImageList)
+        );
+      }
+
+      return getImageList;
+    } catch (err: any) {
+      return imagesList;
+    }
+  }
+
+  async getPostGroupDebugExport(orgId: string, group: string) {
+    const loadAll = await this._postRepository.getPostsByGroup(orgId, group);
+    const errors = await this._postRepository.getErrorsByPostIds(
+      loadAll.map((p) => p.id)
+    );
+    const posts = this.arrangePostsByGroup(loadAll, undefined);
+    const rootPost = posts[0] as any;
+
+    return {
+      type: 'draft' as const,
+      shortLink: false,
+      date: rootPost.publishDate.toISOString(),
+      tags:
+        rootPost.tags?.map((t: any) => ({
+          value: t.tag.id,
+          label: t.tag.name,
+        })) || [],
+      posts: [
+        {
+          integration: { id: 'REPLACE_WITH_LOCAL_INTEGRATION_ID' },
+          group: rootPost.group,
+          settings: JSON.parse(rootPost.settings || '{}'),
+          value: posts.map((post) => ({
+            content: post.content,
+            image: JSON.parse(post.image || '[]'),
+            delay: post.delay || 0,
+          })),
+        },
+      ],
+      _debug: {
+        providerIdentifier: rootPost.integration?.providerIdentifier,
+        providerName: rootPost.integration?.name,
+        state: rootPost.state,
+        error: rootPost.error,
+        errors: errors.map((e) => ({
+          message: e.message,
+          platform: e.platform,
+          body: e.body,
+          createdAt: e.createdAt,
+        })),
+        originalGroup: group,
+        originalPublishDate: rootPost.publishDate,
+        exportedAt: new Date().toISOString(),
+      },
+    };
+  }
+
+  async getPostsByGroup(orgId: string, group: string) {
+    const convertToJPEG = false;
+    const loadAll = await this._postRepository.getPostsByGroup(orgId, group);
+    const posts = this.arrangePostsByGroup(loadAll, undefined);
+
+    return {
+      group: posts?.[0]?.group,
+      posts: await Promise.all(
+        (posts || []).map(async (post) => ({
+          ...post,
+          image: await this.updateMedia(
+            post.id,
+            JSON.parse(post.image || '[]'),
+            convertToJPEG
+          ),
+        }))
+      ),
+      integrationPicture: posts[0]?.integration?.picture,
+      integration: posts[0].integrationId,
+      settings: JSON.parse(posts[0].settings || '{}'),
+    };
+  }
+
+  arrangePostsByGroup(all: any, parent?: string): PostWithConditionals[] {
+    const findAll = all
+      .filter((p: any) =>
+        !parent ? !p.parentPostId : p.parentPostId === parent
+      )
+      .map(({ integration, ...all }: any) => ({
+        ...all,
+        ...(!parent ? { integration } : {}),
+      }));
+
+    return [
+      ...findAll,
+      ...(findAll.length
+        ? findAll.flatMap((p: any) => this.arrangePostsByGroup(all, p.id))
+        : []),
+    ];
+  }
+
+  async getPost(orgId: string, id: string, convertToJPEG = false) {
+    const posts = await this.getPostsRecursively(id, true, orgId, true);
+    const list = {
+      group: posts?.[0]?.group,
+      posts: await Promise.all(
+        (posts || []).map(async (post) => ({
+          ...post,
+          image: await this.updateMedia(
+            post.id,
+            JSON.parse(post.image || '[]'),
+            convertToJPEG
+          ),
+        }))
+      ),
+      integrationPicture: posts[0]?.integration?.picture,
+      integration: posts[0].integrationId,
+      settings: JSON.parse(posts[0].settings || '{}'),
+    };
+
+    return list;
+  }
+
+  async getOldPosts(orgId: string, date: string) {
+    return this._postRepository.getOldPosts(orgId, date);
+  }
+
+  public async updateTags(orgId: string, post: Post[]): Promise<Post[]> {
+    const plainText = JSON.stringify(post);
+    const extract = Array.from(
+      plainText.match(/\(post:[a-zA-Z0-9-_]+\)/g) || []
+    );
+    if (!extract.length) {
+      return post;
+    }
+
+    const ids = (extract || []).map((e) =>
+      e.replace('(post:', '').replace(')', '')
+    );
+    const urls = await this._postRepository.getPostUrls(orgId, ids);
+    const newPlainText = ids.reduce((acc, value) => {
+      const findUrl = urls?.find?.((u) => u.id === value)?.releaseURL || '';
+      return acc.replace(
+        new RegExp(`\\(post:${value}\\)`, 'g'),
+        findUrl.split(',')[0]
+      );
+    }, plainText);
+
+    return this.updateTags(orgId, JSON.parse(newPlainText) as Post[]);
+  }
+
+  public async checkInternalPlug(
+    integration: Integration,
+    orgId: string,
+    id: string,
+    settings: any
+  ) {
+    const plugs = Object.entries(settings).filter(([key]) => {
+      return key.indexOf('plug-') > -1;
+    });
+
+    if (plugs.length === 0) {
+      return [];
+    }
+
+    const parsePlugs = plugs.reduce((all, [key, value]) => {
+      const [_, name, identifier] = key.split('--');
+      all[name] = all[name] || { name };
+      all[name][identifier] = value;
+      return all;
+    }, {} as any);
+
+    const list: {
+      name: string;
+      integrations: { id: string }[];
+      delay: string;
+      active: boolean;
+    }[] = Object.values(parsePlugs);
+
+    return (list || []).flatMap((trigger) => {
+      return (trigger?.integrations || []).flatMap((int) => ({
+        type: 'internal-plug',
+        post: id,
+        originalIntegration: integration.id,
+        integration: int.id,
+        plugName: trigger.name,
+        orgId: orgId,
+        delay: +trigger.delay,
+        information: trigger,
+      }));
+    });
+  }
+
+  public async checkPlugs(
+    orgId: string,
+    providerName: string,
+    integrationId: string
+  ) {
+    const loadAllPlugs = this._integrationManager.getAllPlugs();
+    const getPlugs = await this._integrationService.getPlugs(
+      orgId,
+      integrationId
+    );
+
+    const currentPlug = loadAllPlugs.find((p) => p.identifier === providerName);
+
+    return getPlugs
+      .filter((plug) => {
+        return currentPlug?.plugs?.some(
+          (p: any) => p.methodName === plug.plugFunction
+        );
+      })
+      .map((plug) => {
+        const runPlug = currentPlug?.plugs?.find(
+          (p: any) => p.methodName === plug.plugFunction
+        )!;
+        return {
+          type: 'global',
+          plugId: plug.id,
+          delay: runPlug.runEveryMilliseconds,
+          totalRuns: runPlug.totalRuns,
+        };
+      });
+  }
+
+  async deletePost(orgId: string, group: string, profileId?: string) {
+    const post = await this._postRepository.deletePost(orgId, group, profileId);
+
+    if (post?.id) {
+      try {
+        const workflows = this._temporalService.client
+          .getRawClient()
+          ?.workflow.list({
+            query: `postId="${post.id}" AND ExecutionStatus="Running"`,
+          });
+
+        for await (const executionInfo of workflows) {
+          try {
+            const workflow =
+              await this._temporalService.client.getWorkflowHandle(
+                executionInfo.workflowId
+              );
+            if (
+              workflow &&
+              (await workflow.describe()).status.name !== 'TERMINATED'
+            ) {
+              await workflow.terminate();
+            }
+          } catch (err) {}
+        }
+      } catch (err) {}
+    }
+
+    return { error: true };
+  }
+
+  async countPostsFromDay(orgId: string, date: Date) {
+    return this._postRepository.countPostsFromDay(orgId, date);
+  }
+
+  getPostByForWebhookId(id: string) {
+    return this._postRepository.getPostByForWebhookId(id);
+  }
+
+  async startWorkflow(
+    taskQueue: string,
+    postId: string,
+    orgId: string,
+    state: State
+  ) {
+    try {
+      const workflows = this._temporalService.client
+        .getRawClient()
+        ?.workflow.list({
+          query: `postId="${postId}" AND ExecutionStatus="Running"`,
+        });
+
+      for await (const executionInfo of workflows) {
+        try {
+          const workflow = await this._temporalService.client.getWorkflowHandle(
+            executionInfo.workflowId
+          );
+          if (
+            workflow &&
+            (await workflow.describe()).status.name !== 'TERMINATED'
+          ) {
+            await workflow.terminate();
+          }
+        } catch (err) {}
+      }
+    } catch (err) {}
+
+    if (state === 'DRAFT') {
+      return;
+    }
+
+    try {
+      await this._temporalService.client
+        .getRawClient()
+        ?.workflow.start('postWorkflowV102', {
+          workflowId: `post_${postId}`,
+          taskQueue: 'main',
+          workflowIdConflictPolicy: 'TERMINATE_EXISTING',
+          args: [
+            {
+              taskQueue: taskQueue,
+              postId: postId,
+              organizationId: orgId,
+            },
+          ],
+          typedSearchAttributes: new TypedSearchAttributes([
+            {
+              key: postIdSearchParam,
+              value: postId,
+            },
+            {
+              key: organizationId,
+              value: orgId,
+            },
+          ]),
+        });
+    } catch (err) {}
+  }
+
+  async createPost(orgId: string, body: CreatePostDto, profileId?: string): Promise<any[]> {
+    const postList = [];
+    for (const post of body.posts) {
+      const messages = (post.value || []).map((p) => p.content);
+      const updateContent = !body.shortLink
+        ? messages
+        : await this._shortLinkService.convertTextToShortLinks(orgId, messages);
+
+      post.value = (post.value || []).map((p, i) => ({
+        ...p,
+        content: updateContent[i],
+      }));
+
+      // Posts inherit the profile of their target channel when no explicit
+      // profileId is provided (e.g. org-scoped public API / MCP keys). Without
+      // this, the post is created orphaned (profileId NULL) and stays invisible
+      // in every profile-filtered calendar until the startup orphan migration.
+      let effectiveProfileId = profileId;
+      if (!effectiveProfileId && post?.integration?.id) {
+        const integration = await this._integrationService.getIntegrationById(
+          orgId,
+          post.integration.id
+        );
+        effectiveProfileId = integration?.profileId ?? undefined;
+      }
+
+      const { posts } = await this._postRepository.createOrUpdatePost(
+        body.type,
+        orgId,
+        body.type === 'now' ? dayjs().format('YYYY-MM-DDTHH:mm:00') : body.date,
+        post,
+        body.tags,
+        body.inter,
+        effectiveProfileId
+      );
+
+      if (!posts?.length) {
+        return [] as any[];
+      }
+
+      if (body.type !== 'update') {
+        this.startWorkflow(
+          post.settings.__type.startsWith('zernio-')
+            ? 'main'
+            : post.settings.__type.split('-')[0].toLowerCase(),
+          posts[0].id,
+          orgId,
+          posts[0].state
+        ).catch((err) => {});
+      }
+
+      Sentry.metrics.count('post_created', 1);
+      postList.push({
+        postId: posts[0].id,
+        integration: post.integration.id,
+      });
+    }
+
+    return postList;
+  }
+
+  async separatePosts(
+    orgId: string,
+    content: string,
+    len: number,
+    profileId?: string
+  ) {
+    return this._aiTextService.separatePosts(orgId, content, len, profileId);
+  }
+
+  async changeState(id: string, state: State, err?: any, body?: any) {
+    const updated = await this._postRepository.changeState(id, state, err, body);
+
+    if (state === 'ERROR') {
+      // Histórico (fail-soft): registra a falha de publicação com snapshot do
+      // canal. Mensagem SANITIZADA (name+message) — NUNCA `JSON.stringify(err)`
+      // (o corpo cru pode conter refresh_token/client_secret, é o vazamento que
+      // a Fase 1 tirou da API). O snapshot vem do próprio retorno, sem query extra.
+      await this._statusEventService.record({
+        organizationId: updated.organizationId,
+        type: 'POST_FAILED',
+        severity: 'CRITICAL',
+        message: this.sanitizeErrorMessage(err),
+        profileId: updated.profileId ?? null,
+        integrationId: updated.integrationId ?? null,
+        channelName: updated.integration?.name ?? null,
+        channelPicture: updated.integration?.picture ?? null,
+        providerIdentifier: updated.integration?.providerIdentifier ?? null,
+        entityId: updated.id,
+      });
+    }
+
+    return updated;
+  }
+
+  // Extrai apenas name+message do erro de publicação para o log — NUNCA o corpo
+  // serializado (que pode carregar o token). Objetos sem forma de Error viram
+  // null (não serializamos). O cap de tamanho final é aplicado no StatusEventService.
+  private sanitizeErrorMessage(err?: any): string | null {
+    if (err == null) {
+      return null;
+    }
+    if (typeof err === 'string') {
+      return err;
+    }
+    if (err instanceof Error || (err?.name && err?.message)) {
+      return `${err.name}: ${err.message}`;
+    }
+    return null;
+  }
+
+  async changeDate(
+    orgId: string,
+    id: string,
+    date: string,
+    action: 'schedule' | 'update' = 'schedule',
+    profileId?: string
+  ) {
+    const getPostById = await this._postRepository.getPostById(id, orgId);
+
+    if (profileId && getPostById?.profileId && getPostById.profileId !== profileId) {
+      throw new BadRequestException('Post does not belong to this profile');
+    }
+
+    // schedule: Set status to QUEUE and change date (reschedule the post)
+    // update: Just change the date without changing the status
+    const newDate = await this._postRepository.changeDate(
+      orgId,
+      id,
+      date,
+      getPostById.state === 'DRAFT',
+      action
+    );
+
+    if (action === 'schedule') {
+      try {
+        await this.startWorkflow(
+          getPostById.integration.providerIdentifier.startsWith('zernio-')
+            ? 'main'
+            : getPostById.integration.providerIdentifier.split('-')[0].toLowerCase(),
+          getPostById.id,
+          orgId,
+          getPostById.state === 'DRAFT' ? 'DRAFT' : 'QUEUE'
+        );
+      } catch (err) {}
+    }
+
+    return newDate;
+  }
+
+  async generatePostsDraft(orgId: string, body: CreateGeneratedPostsDto, profileId?: string) {
+    const getAllIntegrations = (
+      await this._integrationService.getIntegrationsList(orgId, profileId)
+    ).filter((f) => !f.disabled && f.providerIdentifier !== 'reddit');
+
+    // const posts = chunk(body.posts, getAllIntegrations.length);
+    const allDates = dayjs()
+      .isoWeek(body.week)
+      .year(body.year)
+      .startOf('isoWeek');
+
+    const dates = [...new Array(7)].map((_, i) => {
+      return allDates.add(i, 'day').format('YYYY-MM-DD');
+    });
+
+    const findTime = (): string => {
+      const totalMinutes = Math.floor(Math.random() * 144) * 10;
+
+      // Convert total minutes to hours and minutes
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+
+      // Format hours and minutes to always be two digits
+      const formattedHours = hours.toString().padStart(2, '0');
+      const formattedMinutes = minutes.toString().padStart(2, '0');
+      const randomDate =
+        shuffle(dates)[0] + 'T' + `${formattedHours}:${formattedMinutes}:00`;
+
+      if (dayjs(randomDate).isBefore(dayjs())) {
+        return findTime();
+      }
+
+      return randomDate;
+    };
+
+    for (const integration of getAllIntegrations) {
+      for (const toPost of body.posts) {
+        const group = makeId(10);
+        const randomDate = findTime();
+
+        await this.createPost(orgId, {
+          type: 'draft',
+          date: randomDate,
+          order: '',
+          shortLink: false,
+          tags: [],
+          posts: [
+            {
+              group,
+              integration: {
+                id: integration.id,
+              },
+              settings: {
+                __type: integration.providerIdentifier as any,
+                title: '',
+                tags: [],
+                subreddit: [],
+              },
+              value: [
+                ...toPost.list.map((l) => ({
+                  id: '',
+                  content: l.post,
+                  delay: 0,
+                  image: [],
+                })),
+                {
+                  id: '',
+                  delay: 0,
+                  content: `Check out the full story here:\n${
+                    body.postId || body.url
+                  }`,
+                  image: [],
+                },
+              ],
+            },
+          ],
+        }, profileId);
+      }
+    }
+  }
+
+  findAllExistingCategories() {
+    return this._postRepository.findAllExistingCategories();
+  }
+
+  findAllExistingTopicsOfCategory(category: string) {
+    return this._postRepository.findAllExistingTopicsOfCategory(category);
+  }
+
+  findPopularPosts(category: string, topic?: string) {
+    return this._postRepository.findPopularPosts(category, topic);
+  }
+
+  async findFreeDateTime(orgId: string, integrationId?: string, profileId?: string) {
+    const findTimes = await this._integrationService.findFreeDateTime(
+      orgId,
+      integrationId
+    );
+    return this.findFreeDateTimeRecursive(
+      orgId,
+      findTimes,
+      dayjs.utc().startOf('day'),
+      profileId
+    );
+  }
+
+  async createPopularPosts(post: {
+    category: string;
+    topic: string;
+    content: string;
+    hook: string;
+  }) {
+    return this._postRepository.createPopularPosts(post);
+  }
+
+  private async findFreeDateTimeRecursive(
+    orgId: string,
+    times: number[],
+    date: dayjs.Dayjs,
+    profileId?: string
+  ): Promise<string> {
+    const list = await this._postRepository.getPostsCountsByDates(
+      orgId,
+      times,
+      date,
+      profileId
+    );
+
+    if (!list.length) {
+      return this.findFreeDateTimeRecursive(orgId, times, date.add(1, 'day'), profileId);
+    }
+
+    const num = list.reduce<null | number>((prev, curr) => {
+      if (prev === null || prev > curr) {
+        return curr;
+      }
+      return prev;
+    }, null) as number;
+
+    return date.clone().add(num, 'minutes').format('YYYY-MM-DDTHH:mm:00');
+  }
+
+  // Fluxo guest (review link publico) — sem contexto de org.
+  getComments(postId: string) {
+    return this._postRepository.getComments(postId);
+  }
+
+  // Fluxo autenticado (membro da org) — escopado por org e perfil.
+  async getReviewComments(
+    orgId: string,
+    postId: string,
+    requireProfileId?: string | null
+  ) {
+    await this.assertPostReviewAccess(orgId, postId, requireProfileId);
+    return this._postRepository.getComments(postId, orgId);
+  }
+
+  // Valida que o post pertence a org e, para membro restrito (org-USER), que
+  // esta no perfil dele — impede revisar/ler comentarios de outro perfil.
+  private async assertPostReviewAccess(
+    orgId: string,
+    postId: string,
+    requireProfileId?: string | null
+  ) {
+    const post = await this._postRepository.getPostProfileScope(orgId, postId);
+    if (!post) {
+      throw new HttpException('Post not found', 404);
+    }
+    if (requireProfileId !== undefined && post.profileId !== requireProfileId) {
+      throw new HttpException('Post is not in your profile', 403);
+    }
+  }
+
+  async createReview(
+    orgId: string,
+    userId: string,
+    postId: string,
+    params: {
+      kind: CommentKind;
+      content: string;
+      requireProfileId?: string | null;
+    }
+  ) {
+    await this.assertPostReviewAccess(orgId, postId, params.requireProfileId);
+    if (params.kind === 'COMMENT' && !params.content?.trim()) {
+      throw new HttpException('Comment is required', 400);
+    }
+    return this._postRepository.createComment(
+      orgId,
+      userId,
+      postId,
+      params.content ?? '',
+      params.kind
+    );
+  }
+
+  getTags(orgId: string, profileId?: string) {
+    return this._postRepository.getTags(orgId, profileId);
+  }
+
+  createTag(orgId: string, body: CreateTagDto, profileId?: string) {
+    return this._postRepository.createTag(orgId, body, profileId);
+  }
+
+  editTag(id: string, orgId: string, body: CreateTagDto, profileId?: string) {
+    return this._postRepository.editTag(id, orgId, body, profileId);
+  }
+
+  deleteTag(id: string, orgId: string, profileId?: string) {
+    return this._postRepository.deleteTag(id, orgId, profileId);
+  }
+
+  createComment(
+    orgId: string,
+    userId: string,
+    postId: string,
+    comment: string
+  ) {
+    return this._postRepository.createComment(orgId, userId, postId, comment);
+  }
+}

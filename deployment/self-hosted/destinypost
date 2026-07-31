@@ -1,0 +1,175 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+INSTALL_DIR="${DESTINYPOST_HOME:-/opt/destinypost}"
+COMPOSE_FILE="$INSTALL_DIR/docker-compose.yml"
+ENV_FILE="$INSTALL_DIR/.env"
+BACKUP_ROOT="$INSTALL_DIR/backups"
+
+fail() {
+  printf 'ERRO: %s\n' "$*" >&2
+  exit 1
+}
+
+[[ -f "$COMPOSE_FILE" && -f "$ENV_FILE" ]] ||
+  fail "Instalacao nao encontrada em $INSTALL_DIR."
+
+compose() {
+  docker compose --project-directory "$INSTALL_DIR" --file "$COMPOSE_FILE" "$@"
+}
+
+env_value() {
+  local key="$1"
+  sed -n "s/^${key}=//p" "$ENV_FILE" | tail -n 1
+}
+
+wait_for_app() {
+  local attempt container_id status
+  container_id="$(compose ps -q app)"
+  [[ -n "$container_id" ]] || return 1
+  for attempt in $(seq 1 60); do
+    status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container_id" 2>/dev/null || true)"
+    [[ "$status" == "healthy" ]] && return 0
+    [[ "$status" == "unhealthy" || "$status" == "exited" ]] && return 1
+    sleep 5
+  done
+  return 1
+}
+
+backup() {
+  local quiet="${1:-}" stamp target postgres_user postgres_db
+  stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+  target="$BACKUP_ROOT/$stamp"
+  postgres_user="$(env_value POSTGRES_USER)"
+  postgres_db="$(env_value POSTGRES_DB)"
+
+  mkdir -p "$target"
+  chmod 0700 "$BACKUP_ROOT" "$target"
+  [[ "$quiet" == "--quiet" ]] || printf 'Criando backup em %s\n' "$target"
+
+  compose exec -T postgres pg_dump \
+    --clean --if-exists --no-owner \
+    -U "$postgres_user" "$postgres_db" |
+    gzip -9 >"$target/database.sql.gz"
+
+  compose exec -T app tar -C /uploads -czf - . >"$target/uploads.tar.gz"
+  install -m 0600 "$ENV_FILE" "$target/env.backup"
+  install -m 0644 "$COMPOSE_FILE" "$target/docker-compose.yml"
+  install -m 0644 "$INSTALL_DIR/Caddyfile" "$target/Caddyfile"
+
+  (
+    cd "$target"
+    sha256sum database.sql.gz uploads.tar.gz env.backup \
+      docker-compose.yml Caddyfile >SHA256SUMS
+  )
+
+  find "$BACKUP_ROOT" -mindepth 1 -maxdepth 1 -type d -mtime +14 -exec rm -rf -- {} +
+  [[ "$quiet" == "--quiet" ]] || printf 'Backup concluido: %s\n' "$target"
+}
+
+restore() {
+  local target="${1:-}" postgres_user postgres_db answer
+  [[ -d "$target" ]] || fail "Informe o diretorio de um backup valido."
+  [[ -f "$target/database.sql.gz" && -f "$target/uploads.tar.gz" ]] ||
+    fail "O backup esta incompleto."
+
+  (
+    cd "$target"
+    sha256sum --check --status SHA256SUMS
+  ) || fail "A verificacao do backup falhou."
+
+  read -r -p "A restauracao substituira banco e midias atuais. Continuar? [digite RESTAURAR] " answer
+  [[ "$answer" == "RESTAURAR" ]] || fail "Restauracao cancelada."
+
+  postgres_user="$(env_value POSTGRES_USER)"
+  postgres_db="$(env_value POSTGRES_DB)"
+  compose stop app
+
+  compose exec -T postgres dropdb --if-exists -U "$postgres_user" "$postgres_db"
+  compose exec -T postgres createdb -U "$postgres_user" "$postgres_db"
+  gzip -dc "$target/database.sql.gz" |
+    compose exec -T postgres psql -v ON_ERROR_STOP=1 -U "$postgres_user" "$postgres_db"
+
+  compose run --rm --no-deps -T --entrypoint sh app -c \
+    'find /uploads -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +; tar -C /uploads -xzf -' \
+    <"$target/uploads.tar.gz"
+  compose up -d app
+  wait_for_app || fail "Restaurado, mas a aplicacao nao ficou saudavel. Consulte os logs."
+  printf 'Restauracao concluida.\n'
+}
+
+update() {
+  local requested_tag="${1:-}" old_image new_image
+  old_image="$(env_value DESTINYPOST_IMAGE)"
+  new_image="$old_image"
+  if [[ -n "$requested_tag" ]]; then
+    new_image="${old_image%:*}:$requested_tag"
+  fi
+
+  backup --quiet
+  sed -i "s|^DESTINYPOST_IMAGE=.*$|DESTINYPOST_IMAGE=${new_image}|" "$ENV_FILE"
+  compose pull app
+  compose up -d app
+
+  if wait_for_app; then
+    printf 'Atualizacao concluida: %s\n' "$new_image"
+    return
+  fi
+
+  printf 'A nova versao falhou. Voltando para %s\n' "$old_image" >&2
+  sed -i "s|^DESTINYPOST_IMAGE=.*$|DESTINYPOST_IMAGE=${old_image}|" "$ENV_FILE"
+  compose up -d app
+  wait_for_app || fail "O rollback tambem falhou. Consulte 'destinypost logs'."
+  fail "Atualizacao revertida."
+}
+
+doctor() {
+  local domain
+  domain="$(env_value DESTINYPOST_DOMAIN)"
+  printf '%-30s' "Docker"
+  docker version >/dev/null 2>&1 && echo "OK" || echo "FALHA"
+  printf '%-30s' "Docker Compose"
+  docker compose version >/dev/null 2>&1 && echo "OK" || echo "FALHA"
+  printf '%-30s' "Configuracao"
+  compose config --quiet >/dev/null 2>&1 && echo "OK" || echo "FALHA"
+  printf '%-30s' "DNS"
+  getent ahostsv4 "$domain" >/dev/null 2>&1 && echo "OK" || echo "FALHA"
+  printf '%-30s' "HTTPS"
+  curl --fail --silent --show-error "https://${domain}/" >/dev/null 2>&1 &&
+    echo "OK" || echo "FALHA"
+  echo
+  compose ps
+}
+
+command="${1:-help}"
+shift || true
+case "$command" in
+  status) compose ps ;;
+  logs) compose logs --tail=300 --follow "${1:-app}" ;;
+  start) compose up -d ;;
+  stop) compose stop ;;
+  restart) compose restart "${1:-app}" ;;
+  backup) backup "${1:-}" ;;
+  restore) restore "${1:-}" ;;
+  update) update "${1:-}" ;;
+  doctor) doctor ;;
+  version)
+    env_value DESTINYPOST_IMAGE
+    ;;
+  *)
+    cat <<'EOF'
+Uso: destinypost <comando>
+
+  status                 Estado dos servicos
+  logs [servico]         Logs em tempo real
+  start                  Inicia a instalacao
+  stop                   Para a instalacao
+  restart [servico]      Reinicia um servico
+  backup                 Backup do banco, midias e configuracao
+  restore <diretorio>    Restaura um backup
+  update [tag]           Atualiza e faz rollback automatico em falha
+  doctor                 Diagnostico da VPS e dos servicos
+  version                Imagem instalada
+EOF
+    ;;
+esac

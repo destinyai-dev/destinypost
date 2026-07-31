@@ -1,0 +1,354 @@
+import { CreateOrgUserDto } from '@gitroom/nestjs-libraries/dtos/auth/create.org.user.dto';
+import { HttpException, Injectable } from '@nestjs/common';
+import { OrganizationRepository } from '@gitroom/nestjs-libraries/database/prisma/organizations/organization.repository';
+import { NotificationService } from '@gitroom/nestjs-libraries/database/prisma/notifications/notification.service';
+import { AddTeamMemberDto } from '@gitroom/nestjs-libraries/dtos/settings/add.team.member.dto';
+import { AuthService } from '@gitroom/helpers/auth/auth.service';
+import dayjs from 'dayjs';
+import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
+import {
+  emailT,
+  normalizeLang,
+  resolveOrgLang,
+} from '@gitroom/nestjs-libraries/emails/i18n/email.i18n';
+import { Organization, ProfileRole, ShortLinkPreference } from '@prisma/client';
+import Zernio from '@zernio/node';
+import { AutopostService } from '@gitroom/nestjs-libraries/database/prisma/autopost/autopost.service';
+import { ProfileService } from '@gitroom/nestjs-libraries/database/prisma/profiles/profile.service';
+
+@Injectable()
+export class OrganizationService {
+  constructor(
+    private _organizationRepository: OrganizationRepository,
+    private _notificationsService: NotificationService,
+    private _profileService: ProfileService
+  ) {}
+  async createOrgAndUser(
+    body: Omit<CreateOrgUserDto, 'providerToken'> & { providerId?: string },
+    ip: string,
+    userAgent: string,
+    language?: string | null
+  ) {
+    return this._organizationRepository.createOrgAndUser(
+      body,
+      this._notificationsService.hasEmailProvider(),
+      ip,
+      userAgent,
+      language ? normalizeLang(language) : null
+    );
+  }
+
+  // Cria a conta sem workspace pessoal (registro via convite).
+  async createUserForInvite(
+    body: Omit<CreateOrgUserDto, 'providerToken'> & { providerId?: string },
+    ip: string,
+    userAgent: string
+  ) {
+    return this._organizationRepository.createUserForInvite(
+      body,
+      this._notificationsService.hasEmailProvider(),
+      ip,
+      userAgent
+    );
+  }
+
+  // Fallback: cria workspace pessoal para um usuario ja existente quando a
+  // entrada no workspace do convite falha (evita conta orfa sem org).
+  async createOrgForUser(
+    userId: string,
+    company: string,
+    language?: string | null
+  ) {
+    return this._organizationRepository.createOrgForUser(
+      userId,
+      company,
+      language ? normalizeLang(language) : null
+    );
+  }
+
+  async getCount() {
+    return this._organizationRepository.getCount();
+  }
+
+  // Um convite e consumido uma unica vez: ao aceitar, o usuario recebe
+  // inviteId = id. Usado para recusar replay de convite ja gasto no bypass
+  // de registro (DISABLE_REGISTRATION).
+  async isInviteConsumed(inviteId: string) {
+    return this._organizationRepository.isInviteConsumed(inviteId);
+  }
+
+  async createMaxUser(id: string, name: string, saasName: string, email: string) {
+    return this._organizationRepository.createMaxUser(id, name, saasName, email);
+  }
+
+  async addUserToOrg(
+    userId: string,
+    id: string,
+    orgId: string,
+    role: 'USER' | 'ADMIN',
+    profileIds?: string[],
+    profileRole?: ProfileRole
+  ) {
+    const added = await this._organizationRepository.addUserToOrg(
+      userId,
+      id,
+      orgId,
+      role
+    );
+    // Convite com perfis: role USER entra restrito aos perfis escolhidos.
+    // ADMIN tem acesso implicito a todos — nao precisa de membership.
+    if (added && role === 'USER' && profileIds?.length) {
+      for (const profileId of profileIds) {
+        try {
+          await this._profileService.addMember(
+            orgId,
+            profileId,
+            userId,
+            profileRole ?? 'EDITOR'
+          );
+        } catch (err) {
+          // Perfil deletado entre o convite e o aceite: segue sem essa
+          // membership (o usuario cai na tela "aguardando atribuicao"
+          // se nenhuma sobrar).
+        }
+      }
+    }
+    return added;
+  }
+
+  getOrgById(id: string) {
+    return this._organizationRepository.getOrgById(id);
+  }
+
+  getOrgByApiKey(api: string) {
+    return this._organizationRepository.getOrgByApiKey(api);
+  }
+
+  getUserOrg(id: string) {
+    return this._organizationRepository.getUserOrg(id);
+  }
+
+  getOrgsByUserId(userId: string) {
+    return this._organizationRepository.getOrgsByUserId(userId);
+  }
+
+  updateApiKey(orgId: string) {
+    return this._organizationRepository.updateApiKey(orgId);
+  }
+
+  getTeam(orgId: string) {
+    return this._organizationRepository.getTeam(orgId);
+  }
+
+  getTeamForNotifications(orgId: string) {
+    return this._organizationRepository.getTeamForNotifications(orgId);
+  }
+
+  async setStreak(organizationId: string, type: 'start' | 'end') {
+    return this._organizationRepository.setStreak(organizationId, type);
+  }
+
+  getOrgByCustomerId(customerId: string) {
+    return this._organizationRepository.getOrgByCustomerId(customerId);
+  }
+
+  async inviteTeamMember(orgId: string, body: AddTeamMemberDto) {
+    // Perfis do convite precisam pertencer a esta org (payload vai assinado
+    // no JWT e vira membership no aceite). Coletamos os nomes para o e-mail.
+    const profileNames: string[] = [];
+    if (body.role === 'USER' && body.profileIds?.length) {
+      for (const profileId of body.profileIds) {
+        const profile = await this._profileService.getProfileById(
+          orgId,
+          profileId
+        );
+        if (!profile) {
+          throw new HttpException(
+            `Profile ${profileId} not found in this workspace`,
+            400
+          );
+        }
+        profileNames.push(profile.name);
+      }
+    }
+    const timeLimit = dayjs().add(1, 'hour').format('YYYY-MM-DD HH:mm:ss');
+    const id = makeId(5);
+    const url =
+      process.env.FRONTEND_URL +
+      `/?org=${AuthService.signJWT({ ...body, orgId, timeLimit, id })}`;
+    if (body.sendEmail) {
+      const lang = resolveOrgLang(
+        await this._organizationRepository.getLanguage(orgId)
+      );
+      // Convite para perfil especifico (role USER) diz o perfil e a funcao;
+      // convite de ADMIN usa o texto generico de organizacao.
+      const isProfileInvite = body.role === 'USER' && profileNames.length > 0;
+      if (isProfileInvite) {
+        const roleLabel = emailT(
+          `email_role_${(body.profileRole ?? 'EDITOR').toLowerCase()}`,
+          lang
+        );
+        await this._notificationsService.sendEmail(
+          body.email,
+          emailT('email_invite_profile_subject', lang),
+          emailT('email_invite_profile_html', lang, {
+            link: url,
+            profiles: profileNames.join(', '),
+            role: roleLabel,
+          }),
+          undefined,
+          lang
+        );
+      } else {
+        await this._notificationsService.sendEmail(
+          body.email,
+          emailT('email_invite_subject', lang),
+          emailT('email_invite_html', lang, { link: url }),
+          undefined,
+          lang
+        );
+      }
+    }
+    return { url };
+  }
+
+  async deleteTeamMember(org: Organization, userId: string) {
+    const userOrgs = await this._organizationRepository.getOrgsByUserId(userId);
+    const findOrgToDelete = userOrgs.find((orgUser) => orgUser.id === org.id);
+    if (!findOrgToDelete) {
+      throw new Error('User is not part of this organization');
+    }
+
+    // @ts-ignore
+    const myRole = org.users[0].role;
+    const userRole = findOrgToDelete.users[0].role;
+    const myLevel = myRole === 'USER' ? 0 : myRole === 'ADMIN' ? 1 : 2;
+    const userLevel = userRole === 'USER' ? 0 : userRole === 'ADMIN' ? 1 : 2;
+
+    if (myLevel < userLevel) {
+      throw new Error('You do not have permission to delete this user');
+    }
+
+    return this._organizationRepository.deleteTeamMember(org.id, userId);
+  }
+
+  disableOrEnableNonSuperAdminUsers(orgId: string, disable: boolean) {
+    return this._organizationRepository.disableOrEnableNonSuperAdminUsers(
+      orgId,
+      disable
+    );
+  }
+
+  getShortlinkPreference(orgId: string) {
+    return this._organizationRepository.getShortlinkPreference(orgId);
+  }
+
+  updateShortlinkPreference(orgId: string, shortlink: ShortLinkPreference) {
+    return this._organizationRepository.updateShortlinkPreference(
+      orgId,
+      shortlink
+    );
+  }
+
+  async getLanguage(orgId: string) {
+    const org = await this._organizationRepository.getLanguage(orgId);
+    return { language: resolveOrgLang(org) };
+  }
+
+  updateLanguage(orgId: string, language: string) {
+    return this._organizationRepository.updateLanguage(
+      orgId,
+      normalizeLang(language)
+    );
+  }
+
+  getFirstOrgLanguageByUserId(userId: string) {
+    return this._organizationRepository.getFirstOrgLanguageByUserId(userId);
+  }
+
+  private async fetchZernioUsage(apiKey: string) {
+    const zernio = new Zernio({ apiKey });
+    const result = await zernio.usage.getUsageStats();
+    // SDK returns { data: UsageStats } via RequestResult wrapper
+    const stats = (result as any)?.data ?? result;
+    return {
+      planName: stats?.planName ?? null,
+      uploads: {
+        used: stats?.usage?.uploads ?? 0,
+        limit: stats?.limits?.uploads ?? 0,
+      },
+      profiles: {
+        used: stats?.usage?.profiles ?? 0,
+        limit: stats?.limits?.profiles ?? 0,
+      },
+      lastReset: stats?.usage?.lastReset ?? null,
+    };
+  }
+
+  async getZernioSettings(orgId: string) {
+    const org = await this._organizationRepository.getZernioApiKey(orgId);
+    if (!org?.zernioApiKey) {
+      return { configured: false, usage: null };
+    }
+
+    try {
+      const apiKey = AuthService.fixedDecryption(org.zernioApiKey);
+      const usage = await this.fetchZernioUsage(apiKey);
+      return { configured: true, usage };
+    } catch {
+      return { configured: true, usage: null };
+    }
+  }
+
+  async saveZernioApiKey(orgId: string, apiKey: string) {
+    if (!apiKey.startsWith('sk_')) {
+      throw new HttpException('Invalid Zernio API key format. Key must start with "sk_".', 400);
+    }
+
+    // Validate key by calling Zernio API
+    try {
+      const usage = await this.fetchZernioUsage(apiKey);
+      const encrypted = AuthService.fixedEncryption(apiKey);
+      await this._organizationRepository.saveZernioApiKey(orgId, encrypted);
+      return { configured: true, usage };
+    } catch {
+      throw new HttpException('Invalid Zernio API key. Could not connect to Zernio.', 400);
+    }
+  }
+
+  async removeZernioApiKey(orgId: string) {
+    await this._organizationRepository.removeZernioApiKey(orgId);
+    return { configured: false };
+  }
+
+  async getDecryptedZernioApiKey(orgId: string): Promise<string | null> {
+    const org = await this._organizationRepository.getZernioApiKey(orgId);
+    if (!org?.zernioApiKey) {
+      return null;
+    }
+    return AuthService.fixedDecryption(org.zernioApiKey);
+  }
+
+  async getShareZernioWithProfiles(orgId: string) {
+    return this._organizationRepository.getShareZernioWithProfiles(orgId);
+  }
+
+  async updateShareZernioWithProfiles(orgId: string, enabled: boolean) {
+    return this._organizationRepository.updateShareZernioWithProfiles(orgId, enabled);
+  }
+
+  async getShareProviderCredentials(orgId: string) {
+    return {
+      enabled: await this._organizationRepository.getShareProviderCredentials(
+        orgId
+      ),
+    };
+  }
+
+  async updateShareProviderCredentials(orgId: string, enabled: boolean) {
+    return this._organizationRepository.updateShareProviderCredentials(
+      orgId,
+      enabled
+    );
+  }
+}

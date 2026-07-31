@@ -1,0 +1,322 @@
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpException,
+  Param,
+  Post,
+  Put,
+  Query,
+  Res,
+} from '@nestjs/common';
+import { PostsService } from '@gitroom/nestjs-libraries/database/prisma/posts/posts.service';
+import { GetOrgFromRequest } from '@gitroom/nestjs-libraries/user/org.from.request';
+import { GetProfileFromRequest } from '@gitroom/nestjs-libraries/user/profile.from.request';
+import { Organization, Profile, User } from '@prisma/client';
+import { GetPostsDto } from '@gitroom/nestjs-libraries/dtos/posts/get.posts.dto';
+import { GetPostsListDto } from '@gitroom/nestjs-libraries/dtos/posts/get.posts.list.dto';
+import { CheckPolicies } from '@gitroom/backend/services/auth/permissions/permissions.ability';
+import { ApiTags } from '@nestjs/swagger';
+import { GeneratorDto } from '@gitroom/nestjs-libraries/dtos/generator/generator.dto';
+import { CreateGeneratedPostsDto } from '@gitroom/nestjs-libraries/dtos/generator/create.generated.posts.dto';
+import { AgentGraphService } from '@gitroom/nestjs-libraries/agent/agent.graph.service';
+import { Response } from 'express';
+import { GetUserFromRequest } from '@gitroom/nestjs-libraries/user/user.from.request';
+import { ShortLinkService } from '@gitroom/nestjs-libraries/short-linking/short.link.service';
+import { CreateTagDto } from '@gitroom/nestjs-libraries/dtos/posts/create.tag.dto';
+import { ReviewLinksService } from '@gitroom/nestjs-libraries/database/prisma/review-links/review-links.service';
+import {
+  AuthorizationActions,
+  Sections,
+} from '@gitroom/backend/services/auth/permissions/permission.exception.class';
+import { AllowViewer } from '@gitroom/nestjs-libraries/services/auth/profile-access/profile-access.decorators';
+import { getOrgRole } from '@gitroom/nestjs-libraries/user/org.role';
+
+@ApiTags('Posts')
+@Controller('/posts')
+export class PostsController {
+  constructor(
+    private _postsService: PostsService,
+    private _agentGraphService: AgentGraphService,
+    private _shortLinkService: ShortLinkService,
+    private _reviewLinksService: ReviewLinksService
+  ) {}
+
+  @Get('/:id/statistics')
+  async getStatistics(
+    @GetOrgFromRequest() org: Organization,
+    @Param('id') id: string
+  ) {
+    return this._postsService.getStatistics(org.id, id);
+  }
+
+  @Get('/:id/missing')
+  async getMissingContent(
+    @GetOrgFromRequest() org: Organization,
+    @Param('id') id: string
+  ) {
+    return this._postsService.getMissingContent(org.id, id);
+  }
+
+  @Put('/:id/release-id')
+  async updateReleaseId(
+    @GetOrgFromRequest() org: Organization,
+    @Param('id') id: string,
+    @Body('releaseId') releaseId: string
+  ) {
+    return this._postsService.updateReleaseId(org.id, id, releaseId);
+  }
+
+  @Post('/should-shortlink')
+  async shouldShortlink(@Body() body: { messages: string[] }) {
+    return { ask: this._shortLinkService.askShortLinkedin(body.messages) };
+  }
+
+  // Revisao do cliente in-app: aprovar / pedir alteracao / comentar. Liberado
+  // ao Visualizador (@AllowViewer) e escopado ao perfil dele (org-USER).
+  @Post('/:id/comments')
+  @AllowViewer()
+  async createComment(
+    @GetOrgFromRequest() org: Organization,
+    @GetUserFromRequest() user: User,
+    @GetProfileFromRequest() profile: Profile | null,
+    @Param('id') id: string,
+    @Body()
+    body: { comment?: string; kind?: 'COMMENT' | 'APPROVAL' | 'CHANGE_REQUEST' }
+  ) {
+    return this._postsService.createReview(org.id, user.id, id, {
+      kind: body.kind ?? 'COMMENT',
+      content: body.comment ?? '',
+      requireProfileId:
+        getOrgRole(org) === 'USER' ? profile?.id ?? null : undefined,
+    });
+  }
+
+  @Get('/:id/comments')
+  async getComments(
+    @GetOrgFromRequest() org: Organization,
+    @GetProfileFromRequest() profile: Profile | null,
+    @Param('id') id: string
+  ) {
+    return this._postsService.getReviewComments(
+      org.id,
+      id,
+      getOrgRole(org) === 'USER' ? profile?.id ?? null : undefined
+    );
+  }
+
+  @Post('/:id/review-links')
+  async createReviewLink(
+    @GetOrgFromRequest() org: Organization,
+    @GetUserFromRequest() user: User,
+    @Param('id') id: string,
+    @Body()
+    body: {
+      expiresInDays?: number;
+      allowComment?: boolean;
+      allowApprove?: boolean;
+    }
+  ) {
+    return this._reviewLinksService.createForPost({
+      postId: id,
+      orgId: org.id,
+      userId: user.id,
+      expiresInDays: body?.expiresInDays,
+      allowComment: body?.allowComment,
+      allowApprove: body?.allowApprove,
+    });
+  }
+
+  @Get('/:id/review-links')
+  async listReviewLinks(
+    @GetOrgFromRequest() org: Organization,
+    @Param('id') id: string
+  ) {
+    return {
+      reviewLinks: await this._reviewLinksService.listForPost(id, org.id),
+    };
+  }
+
+  @Delete('/:id/review-links/:linkId')
+  async revokeReviewLink(
+    @GetOrgFromRequest() org: Organization,
+    @Param('linkId') linkId: string
+  ) {
+    return this._reviewLinksService.revoke(linkId, org.id);
+  }
+
+  @Get('/tags')
+  async getTags(
+    @GetOrgFromRequest() org: Organization,
+    @GetProfileFromRequest() profile: Profile | null
+  ) {
+    return { tags: await this._postsService.getTags(org.id, profile?.id) };
+  }
+
+  @Post('/tags')
+  async createTag(
+    @GetOrgFromRequest() org: Organization,
+    @GetProfileFromRequest() profile: Profile | null,
+    @Body() body: CreateTagDto
+  ) {
+    return this._postsService.createTag(org.id, body, profile?.id);
+  }
+
+  @Put('/tags/:id')
+  async editTag(
+    @GetOrgFromRequest() org: Organization,
+    @GetProfileFromRequest() profile: Profile | null,
+    @Body() body: CreateTagDto,
+    @Param('id') id: string
+  ) {
+    return this._postsService.editTag(id, org.id, body, profile?.id);
+  }
+
+  @Delete('/tags/:id')
+  async deleteTag(
+    @GetOrgFromRequest() org: Organization,
+    @GetProfileFromRequest() profile: Profile | null,
+    @Param('id') id: string
+  ) {
+    return this._postsService.deleteTag(id, org.id, profile?.id);
+  }
+
+  @Get('/')
+  async getPosts(
+    @GetOrgFromRequest() org: Organization,
+    @GetProfileFromRequest() profile: Profile | null,
+    @Query() query: GetPostsDto
+  ) {
+    return this._postsService.getPostsMinified(org.id, query, profile?.id);
+  }
+
+  @Get('/find-slot')
+  async findSlot(
+    @GetOrgFromRequest() org: Organization,
+    @GetProfileFromRequest() profile: Profile | null
+  ) {
+    return { date: await this._postsService.findFreeDateTime(org.id, undefined, profile?.id) };
+  }
+
+  @Get('/find-slot/:id')
+  async findSlotIntegration(
+    @GetOrgFromRequest() org: Organization,
+    @GetProfileFromRequest() profile: Profile | null,
+    @Param('id') id?: string
+  ) {
+    return { date: await this._postsService.findFreeDateTime(org.id, id, profile?.id) };
+  }
+
+  @Get('/list')
+  async getPostsList(
+    @GetOrgFromRequest() org: Organization,
+    @GetProfileFromRequest() profile: Profile | null,
+    @Query() query: GetPostsListDto
+  ) {
+    return this._postsService.getPostsList(org.id, query, profile?.id);
+  }
+
+  @Get('/old')
+  oldPosts(
+    @GetOrgFromRequest() org: Organization,
+    @Query('date') date: string
+  ) {
+    return this._postsService.getOldPosts(org.id, date);
+  }
+
+  @Get('/group/:group/debug-export')
+  async getPostGroupDebugExport(
+    @GetOrgFromRequest() org: Organization,
+    @GetUserFromRequest() user: User,
+    @Param('group') group: string
+  ) {
+    if (!user.isSuperAdmin) {
+      throw new HttpException('Forbidden', 403);
+    }
+    return this._postsService.getPostGroupDebugExport(org.id, group);
+  }
+
+  @Get('/group/:group')
+  getPostsByGroup(@GetOrgFromRequest() org: Organization, @Param('group') group: string) {
+    return this._postsService.getPostsByGroup(org.id, group);
+  }
+
+  @Get('/:id')
+  getPost(@GetOrgFromRequest() org: Organization, @Param('id') id: string) {
+    return this._postsService.getPost(org.id, id);
+  }
+
+  @Post('/')
+  @CheckPolicies([AuthorizationActions.Create, Sections.POSTS_PER_MONTH])
+  async createPost(
+    @GetOrgFromRequest() org: Organization,
+    @GetProfileFromRequest() profile: Profile | null,
+    @Body() rawBody: any
+  ) {
+    console.log(JSON.stringify(rawBody, null, 2));
+    const body = await this._postsService.mapTypeToPost(rawBody, org.id);
+    return this._postsService.createPost(org.id, body, profile?.id);
+  }
+
+  @Post('/generator/draft')
+  @CheckPolicies([AuthorizationActions.Create, Sections.POSTS_PER_MONTH])
+  generatePostsDraft(
+    @GetOrgFromRequest() org: Organization,
+    @GetProfileFromRequest() profile: Profile | null,
+    @Body() body: CreateGeneratedPostsDto
+  ) {
+    return this._postsService.generatePostsDraft(org.id, body, profile?.id);
+  }
+
+  @Post('/generator')
+  @CheckPolicies([AuthorizationActions.Create, Sections.POSTS_PER_MONTH])
+  async generatePosts(
+    @GetOrgFromRequest() org: Organization,
+    @GetProfileFromRequest() profile: Profile | null,
+    @Body() body: GeneratorDto,
+    @Res({ passthrough: false }) res: Response
+  ) {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    const stream = await this._agentGraphService.start(org.id, body, profile?.id);
+    for await (const event of stream) {
+      res.write(JSON.stringify(event) + '\n');
+    }
+
+    res.end();
+  }
+
+  @Delete('/:group')
+  deletePost(
+    @GetOrgFromRequest() org: Organization,
+    @GetProfileFromRequest() profile: Profile | null,
+    @Param('group') group: string
+  ) {
+    return this._postsService.deletePost(org.id, group, profile?.id);
+  }
+
+  @Put('/:id/date')
+  changeDate(
+    @GetOrgFromRequest() org: Organization,
+    @GetProfileFromRequest() profile: Profile | null,
+    @Param('id') id: string,
+    @Body('date') date: string,
+    @Body('action') action: 'schedule' | 'update' = 'schedule'
+  ) {
+    return this._postsService.changeDate(org.id, id, date, action, profile?.id);
+  }
+
+  @Post('/separate-posts')
+  async separatePosts(
+    @GetOrgFromRequest() org: Organization,
+    @GetProfileFromRequest() profile: Profile | null,
+    @Body() body: { content: string; len: number }
+  ) {
+    return this._postsService.separatePosts(
+      org.id,
+      body.content,
+      body.len,
+      profile?.id
+    );
+  }
+}

@@ -1,0 +1,76 @@
+# See http://help.github.com/ignore-files/ for more about ignoring files.
+
+# compiled output
+dist
+tmp
+/out-tsc
+.env
+# dependencies
+node_modules
+node-compile-cache
+
+# IDEs and editors
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+.vscode/*
+
+# IDE - VSCode
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# misc
+/.sass-cache
+/connect.lock
+/coverage
+/libpeerconnection.log
+npm-debug.log
+yarn-error.log
+testem.log
+/typings
+
+# System Files
+.DS_Store
+Thumbs.db
+
+.nx/cache
+.nx/workspace-data
+
+# Next.js
+.next
+
+# Vim files
+**/*.swp
+**/*.swo
+
+# Temporary files
+*.orig
+*.~*~
+*.tsbuildinfo
+
+# ignore Secrets folder
+.secrets/
+libraries/plugins/src/plugins.ts
+i18n.cache
+
+# Local uploads (user media — not code)
+/uploads/
+/apps/backend/undefined/
+node-compile-cache/
+.playwright-mcp/
+
+# Graphify ephemeral files (mtime-based; broken after `git clone`).
+# Not produced by graphifyy 0.7.13 today but harmless to gitignore preemptively.
+graphify-out/manifest.json
+graphify-out/cost.json
+graphify-out/.rebuild.lock
+# Graphify intermediate build artifacts (efêmeros, regenerados em todo rebuild)
+graphify-out/.graphify_*
+/graphify-out/cache/*

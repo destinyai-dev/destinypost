@@ -1,0 +1,192 @@
+name: destinypost
+
+services:
+  app:
+    image: ${DESTINYPOST_IMAGE}
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      TEMPORAL_ADDRESS: temporal:7233
+      BACKEND_INTERNAL_URL: http://127.0.0.1:3000
+      MAIN_URL: https://${DESTINYPOST_DOMAIN}
+      FRONTEND_URL: https://${DESTINYPOST_DOMAIN}
+      NEXT_PUBLIC_BACKEND_URL: https://${DESTINYPOST_DOMAIN}/api
+      STORAGE_PROVIDER: local
+      UPLOAD_DIRECTORY: /uploads
+      NEXT_PUBLIC_UPLOAD_DIRECTORY: /uploads
+      NEXT_PUBLIC_UPLOAD_STATIC_DIRECTORY: /uploads
+      IS_GENERAL: "true"
+      SELF_HOSTED: "true"
+      DISABLE_REGISTRATION: "true"
+      DISABLE_BILLING: "true"
+      DISABLE_MARKETPLACE: "true"
+      AI_CREDITS_MODE: unlimited
+      STATUS_INFRA_HEALTH_ENABLED: "true"
+      SOURCE_CODE_URL: ${SOURCE_CODE_URL}
+    volumes:
+      - app-config:/config
+      - app-uploads:/uploads
+    expose:
+      - "5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+    networks:
+      - frontend
+      - backend
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL}
+      DESTINYPOST_DOMAIN: ${DESTINYPOST_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      app:
+        condition: service_started
+    networks:
+      - frontend
+
+  postgres:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - backend
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --requirepass
+      - ${REDIS_PASSWORD}
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a '${REDIS_PASSWORD}' ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - backend
+
+  temporal-postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${TEMPORAL_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${TEMPORAL_POSTGRES_PASSWORD}
+    volumes:
+      - temporal-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${TEMPORAL_POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - backend
+
+  temporal-elasticsearch:
+    image: elasticsearch:7.17.27
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      cluster.routing.allocation.disk.threshold_enabled: "true"
+      cluster.routing.allocation.disk.watermark.low: 1gb
+      cluster.routing.allocation.disk.watermark.high: 768mb
+      cluster.routing.allocation.disk.watermark.flood_stage: 512mb
+      ES_JAVA_OPTS: -Xms384m -Xmx384m
+    volumes:
+      - temporal-elasticsearch-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl --fail --silent http://127.0.0.1:9200/_cluster/health >/dev/null",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+    networks:
+      - backend
+
+  temporal:
+    image: temporalio/auto-setup:1.28.1
+    restart: unless-stopped
+    environment:
+      DB: postgres12
+      DB_PORT: "5432"
+      POSTGRES_USER: ${TEMPORAL_POSTGRES_USER}
+      POSTGRES_PWD: ${TEMPORAL_POSTGRES_PASSWORD}
+      POSTGRES_SEEDS: temporal-postgres
+      ENABLE_ES: "true"
+      ES_SEEDS: temporal-elasticsearch
+      ES_VERSION: v7
+      TEMPORAL_NAMESPACE: default
+      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-sql.yaml
+    volumes:
+      - ./dynamicconfig:/etc/temporal/config/dynamicconfig:ro
+    depends_on:
+      temporal-postgres:
+        condition: service_healthy
+      temporal-elasticsearch:
+        condition: service_healthy
+    networks:
+      - backend
+
+  temporal-ui:
+    image: temporalio/ui:2.34.0
+    restart: unless-stopped
+    profiles: ["debug"]
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: https://${DESTINYPOST_DOMAIN}
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      - temporal
+    networks:
+      - backend
+
+volumes:
+  app-config:
+  app-uploads:
+  caddy-config:
+  caddy-data:
+  postgres-data:
+  redis-data:
+  temporal-elasticsearch-data:
+  temporal-postgres-data:
+
+networks:
+  frontend:
+  backend:
