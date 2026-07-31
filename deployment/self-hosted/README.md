@@ -11,19 +11,26 @@ cliente. Banco, midias, credenciais e contas sociais permanecem na VPS.
 - IPv4 publico e dominio apontado para a VPS;
 - portas TCP 22, 80 e 443 liberadas.
 
-## Instalacao
+## Instalacao privada
 
-Baixe o instalador e valide o checksum publicado na mesma release:
+O repositorio, as releases e a imagem permanecem privados. A instalacao
+precisa de uma credencial dedicada com acesso de leitura ao repositorio e ao
+GitHub Container Registry. Nao distribua um token pessoal de administrador.
+
+O vendedor baixa `install.sh` e `install.sh.sha256` na pagina da release
+privada e entrega os dois arquivos ao cliente. Na VPS:
 
 ```bash
-curl -fsSLO https://github.com/destinyai-dev/destinypost/releases/latest/download/install.sh
-curl -fsSLO https://github.com/destinyai-dev/destinypost/releases/latest/download/install.sh.sha256
 sha256sum -c install.sh.sha256
 sudo bash install.sh
 ```
 
+O instalador solicita a credencial privada sem exibi-la na tela.
 O instalador gera senhas unicas, sobe os containers, configura HTTPS e
-habilita backup diario. Nenhuma chave de API de desenvolvimento e incluida.
+habilita backup diario. A credencial de distribuicao fica em
+`/opt/destinypost/.github-credentials`, acessivel somente por `root`, para
+permitir atualizacoes futuras. Nenhuma chave de API de desenvolvimento e
+incluida.
 
 ## Primeiro acesso
 

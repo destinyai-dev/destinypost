@@ -10,6 +10,8 @@ INSTALL_DIR="${DESTINYPOST_HOME:-$DEFAULT_INSTALL_DIR}"
 IMAGE="${DESTINYPOST_IMAGE:-$DEFAULT_IMAGE}"
 DOMAIN="${DESTINYPOST_DOMAIN:-}"
 ACME_EMAIL="${ACME_EMAIL:-}"
+GITHUB_USER="${DESTINYPOST_GITHUB_USER:-destinyai-dev}"
+GITHUB_TOKEN="${DESTINYPOST_GITHUB_TOKEN:-}"
 ASSUME_YES="false"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -33,6 +35,10 @@ Opcoes:
   --image ghcr.io/empresa/destinypost:versao
   --install-dir /opt/destinypost
   --yes
+
+Distribuicao privada:
+  Informe DESTINYPOST_GITHUB_TOKEN no ambiente ou digite o token quando
+  solicitado. Use uma credencial dedicada com acesso somente de leitura.
 EOF
 }
 
@@ -93,6 +99,13 @@ fi
 [[ "$ACME_EMAIL" =~ ^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$ ]] ||
   fail "Email invalido."
 
+if [[ -z "$GITHUB_TOKEN" ]]; then
+  read -r -s -p "Token de leitura da distribuicao DestinyPost: " GITHUB_TOKEN
+  printf '\n'
+fi
+[[ -n "$GITHUB_TOKEN" ]] ||
+  fail "O token de leitura e obrigatorio para a distribuicao privada."
+
 TOTAL_MEMORY_MB="$(awk '/MemTotal/ {print int($2 / 1024)}' /proc/meminfo)"
 AVAILABLE_DISK_GB="$(df -Pk "$([[ -d "$INSTALL_DIR" ]] && echo "$INSTALL_DIR" || echo /)" | awk 'NR==2 {print int($4 / 1024 / 1024)}')"
 
@@ -113,7 +126,7 @@ fi
 say "Instalando dependencias do servidor"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install -y ca-certificates curl dnsutils gzip iproute2 openssl tar
+apt-get install -y ca-certificates curl dnsutils gzip iproute2 jq openssl tar
 
 if ! command -v docker >/dev/null 2>&1; then
   apt-get install -y docker.io
@@ -150,18 +163,40 @@ copy_local_bundle() {
 }
 
 download_release_bundle() {
-  local repository release_base archive checksum
+  local repository api_base release_json archive checksum archive_url checksum_url
   repository="${DESTINYPOST_GITHUB_REPOSITORY:-$DEFAULT_RELEASE_REPOSITORY}"
-  release_base="${DESTINYPOST_RELEASE_BASE_URL:-https://github.com/${repository}/releases/latest/download}"
+  api_base="${DESTINYPOST_GITHUB_API_URL:-https://api.github.com/repos/${repository}}"
+  release_json="$(mktemp)"
   archive="$(mktemp)"
   checksum="$(mktemp)"
 
   say "Baixando pacote de instalacao"
   curl --fail --location --silent --show-error \
-    "${release_base}/destinypost-self-hosted.tar.gz" \
+    --header "Authorization: Bearer ${GITHUB_TOKEN}" \
+    --header "Accept: application/vnd.github+json" \
+    "${api_base}/releases/latest" \
+    --output "$release_json"
+
+  archive_url="$(jq -r \
+    '.assets[] | select(.name == "destinypost-self-hosted.tar.gz") | .url' \
+    "$release_json")"
+  checksum_url="$(jq -r \
+    '.assets[] | select(.name == "destinypost-self-hosted.tar.gz.sha256") | .url' \
+    "$release_json")"
+  [[ -n "$archive_url" && "$archive_url" != "null" ]] ||
+    fail "A release privada nao contem o pacote de instalacao."
+  [[ -n "$checksum_url" && "$checksum_url" != "null" ]] ||
+    fail "A release privada nao contem o checksum do pacote."
+
+  curl --fail --location --silent --show-error \
+    --header "Authorization: Bearer ${GITHUB_TOKEN}" \
+    --header "Accept: application/octet-stream" \
+    "$archive_url" \
     --output "$archive"
   curl --fail --location --silent --show-error \
-    "${release_base}/destinypost-self-hosted.tar.gz.sha256" \
+    --header "Authorization: Bearer ${GITHUB_TOKEN}" \
+    --header "Accept: application/octet-stream" \
+    "$checksum_url" \
     --output "$checksum"
 
   (
@@ -171,10 +206,17 @@ download_release_bundle() {
   ) || fail "A assinatura SHA-256 do pacote nao confere."
 
   tar -xzf "$archive" -C "$INSTALL_DIR"
-  rm -f "$archive" "$checksum"
+  rm -f "$release_json" "$archive" "$checksum"
 }
 
 copy_local_bundle || download_release_bundle
+
+umask 077
+cat >"$INSTALL_DIR/.github-credentials" <<EOF
+GITHUB_USER=$GITHUB_USER
+GITHUB_TOKEN=$GITHUB_TOKEN
+EOF
+chmod 0600 "$INSTALL_DIR/.github-credentials"
 
 POSTGRES_PASSWORD="$(openssl rand -hex 24)"
 REDIS_PASSWORD="$(openssl rand -hex 24)"
@@ -182,7 +224,6 @@ TEMPORAL_POSTGRES_PASSWORD="$(openssl rand -hex 24)"
 JWT_SECRET="$(openssl rand -base64 64 | tr -d '\n')"
 ENCRYPTION_KEY="$(openssl rand -base64 32 | tr -d '\n')"
 
-umask 077
 cat >"$INSTALL_DIR/.env" <<EOF
 DESTINYPOST_DOMAIN=$DOMAIN
 ACME_EMAIL=$ACME_EMAIL
@@ -241,9 +282,19 @@ say "Validando a configuracao"
 )
 
 say "Baixando imagens e iniciando os servicos"
-(
+printf '%s' "$GITHUB_TOKEN" |
+  docker login ghcr.io --username "$GITHUB_USER" --password-stdin >/dev/null ||
+  fail "Nao foi possivel autenticar no registro privado."
+if ! (
   cd "$INSTALL_DIR"
   docker compose pull
+); then
+  docker logout ghcr.io >/dev/null 2>&1 || true
+  fail "Nao foi possivel baixar as imagens privadas."
+fi
+docker logout ghcr.io >/dev/null 2>&1 || true
+(
+  cd "$INSTALL_DIR"
   docker compose up -d
 )
 

@@ -4,6 +4,7 @@ set -Eeuo pipefail
 INSTALL_DIR="${DESTINYPOST_HOME:-/opt/destinypost}"
 COMPOSE_FILE="$INSTALL_DIR/docker-compose.yml"
 ENV_FILE="$INSTALL_DIR/.env"
+CREDENTIAL_FILE="$INSTALL_DIR/.github-credentials"
 BACKUP_ROOT="$INSTALL_DIR/backups"
 
 fail() {
@@ -21,6 +22,29 @@ compose() {
 env_value() {
   local key="$1"
   sed -n "s/^${key}=//p" "$ENV_FILE" | tail -n 1
+}
+
+credential_value() {
+  local key="$1"
+  [[ -f "$CREDENTIAL_FILE" ]] || return 0
+  sed -n "s/^${key}=//p" "$CREDENTIAL_FILE" | tail -n 1
+}
+
+pull_private_image() {
+  local github_user github_token pull_status
+  github_user="$(credential_value GITHUB_USER)"
+  github_token="$(credential_value GITHUB_TOKEN)"
+  [[ -n "$github_user" && -n "$github_token" ]] ||
+    fail "Credencial privada ausente em $CREDENTIAL_FILE."
+
+  printf '%s' "$github_token" |
+    docker login ghcr.io --username "$github_user" --password-stdin >/dev/null ||
+    fail "Falha ao autenticar no registro privado."
+
+  pull_status=0
+  compose pull app || pull_status=$?
+  docker logout ghcr.io >/dev/null 2>&1 || true
+  return "$pull_status"
 }
 
 wait_for_app() {
@@ -108,7 +132,7 @@ update() {
 
   backup --quiet
   sed -i "s|^DESTINYPOST_IMAGE=.*$|DESTINYPOST_IMAGE=${new_image}|" "$ENV_FILE"
-  compose pull app
+  pull_private_image || fail "Nao foi possivel baixar a atualizacao privada."
   compose up -d app
 
   if wait_for_app; then
@@ -132,6 +156,8 @@ doctor() {
   docker compose version >/dev/null 2>&1 && echo "OK" || echo "FALHA"
   printf '%-30s' "Configuracao"
   compose config --quiet >/dev/null 2>&1 && echo "OK" || echo "FALHA"
+  printf '%-30s' "Credencial de atualizacao"
+  [[ -s "$CREDENTIAL_FILE" ]] && echo "OK" || echo "FALHA"
   printf '%-30s' "DNS"
   getent ahostsv4 "$domain" >/dev/null 2>&1 && echo "OK" || echo "FALHA"
   printf '%-30s' "HTTPS"
