@@ -301,6 +301,11 @@ docker logout ghcr.io >/dev/null 2>&1 || true
 say "Aguardando o DestinyPost ficar pronto"
 READY="false"
 for _ in $(seq 1 90); do
+  if [[ "$(docker inspect --format '{{.State.Restarting}}' destinypost-app-1 2>/dev/null || true)" == "true" ]]; then
+    say "O servico principal reiniciou durante a inicializacao. Ultimos logs:"
+    docker logs --tail 40 destinypost-app-1 2>&1 || true
+    fail "O DestinyPost nao conseguiu iniciar. Consulte os logs acima."
+  fi
   if curl --fail --silent --show-error "https://${DOMAIN}/" >/dev/null 2>&1; then
     READY="true"
     break
@@ -309,7 +314,9 @@ for _ in $(seq 1 90); do
 done
 
 if [[ "$READY" != "true" ]]; then
-  say "A aplicacao ainda esta inicializando. Execute 'destinypost logs' para acompanhar."
+  say "A aplicacao ainda nao respondeu por HTTPS."
+  say "Confirme se as portas TCP 80 e 443 estao liberadas no firewall da VPS e no provedor."
+  say "Execute 'destinypost logs' para acompanhar."
 else
   say "Instalacao concluida."
 fi
