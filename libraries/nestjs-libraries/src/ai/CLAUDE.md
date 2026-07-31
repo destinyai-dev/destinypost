@@ -11,7 +11,7 @@
 
 ## What lives here
 
-The Robô MultiPost central AI provider system. Configuration is **per-workspace via UI** (`Settings > AI Models`), not via env var. Each `kind` (TEXT, IMAGE, VIDEO, WEB_SEARCH) is configurable with provider (OpenRouter or OpenAI direct), API key, model, fallback, and options. Also includes:
+The DestinyPost central AI provider system. Configuration is **per-workspace via UI** (`Settings > AI Models`), not via env var. Each `kind` (TEXT, IMAGE, VIDEO, WEB_SEARCH) is configurable with provider (OpenRouter or OpenAI direct), API key, model, fallback, and options. Also includes:
 
 - **AI Credits System** — controls how many images/videos each profile can generate per month.
 - **Per-profile persona** — voice tone, target audience, preferred CTAs, restrictions, image style.

@@ -1,8 +1,8 @@
-# Robô MultiPost — Claude Code Instructions
+# DestinyPost — Claude Code Instructions
 
 ## Identity
 
-**Robô MultiPost** is a fork of [Postiz](https://github.com/gitroomhq/postiz-app) (AGPL-3.0), customized for the Automação Sem Limites community. Self-hosted social media scheduler with 33+ channels, calendar-based scheduling, analytics, media library, and a per-workspace AI layer.
+**DestinyPost** is a fork of [Postiz](https://github.com/gitroomhq/postiz-app) (AGPL-3.0), maintained by Destiny AI. Self-hosted social media scheduler with 33+ channels, calendar-based scheduling, analytics, media library, and a per-workspace AI layer.
 
 ## Stack
 
@@ -25,7 +25,7 @@
 | `apps/frontend/` | Next.js UI | [link](apps/frontend/CLAUDE.md) |
 | `apps/orchestrator/` | Temporal workflows | [link](apps/orchestrator/CLAUDE.md) |
 | `apps/extension/` | Browser extension | — (stub) |
-| `apps/cli/` | CLI/skill de agente (`@robo-multipost/agent`) — self-hosted, com flows | [link](apps/cli/CLAUDE.md) |
+| `apps/cli/` | CLI/skill de agente (`@destinyai-dev/destinypost-agent`) — self-hosted, com flows | [link](apps/cli/CLAUDE.md) |
 | `apps/sdk/` | `@postiz/node` SDK | — (stub) |
 | `apps/commands/` | Background commands microservice | — (stub) |
 | `libraries/nestjs-libraries/` | Shared backend/orchestrator domain | [link](libraries/nestjs-libraries/CLAUDE.md) |
@@ -58,7 +58,7 @@
 - **Never** hardcode `process.env` in OAuth providers — propagate `ClientInformation` (see [`libraries/nestjs-libraries/src/integrations/social/CLAUDE.md`](libraries/nestjs-libraries/src/integrations/social/CLAUDE.md)).
 - **Never** throw/extend `HttpForbiddenException` for a generic 403 — the global `HttpExceptionFilter` (`libraries/nestjs-libraries/src/services/exception.filter.ts`) always converts it into a 401 + auth-cookie clear (forced logout). For a real 403 that keeps the session, use `new HttpException(body, 403)` or a dedicated exception class (e.g. `NoProfileAssignedException`, `AdminRoleRequiredException`) — see [`apps/backend/CLAUDE.md`](apps/backend/CLAUDE.md).
 - **Never** touch `.context/` — managed by dotcontext via MCP, has its own lifecycle.
-- **Never** run `gh pr <create|edit|merge|close|ready|review|comment|reopen>` without `--repo maiconramos/robo-multipost` — this repo is a fork of `gitroomhq/postiz-app`, and `gh` defaults to the upstream public repo. Enforced by hook `.claude/hooks/gh-pr-fork-guard.sh` (blocks the command with exit 2). Always use `gh pr <subcommand> --repo maiconramos/robo-multipost --base main --head <branch> ...`. Read-only `gh pr view|list|diff|checks|status` are not blocked.
+- **Never** run `gh pr <create|edit|merge|close|ready|review|comment|reopen>` without `--repo destinyai-dev/destinypost` — this repo is a fork of `gitroomhq/postiz-app`, and `gh` may default to the upstream public repo. Enforced by hook `.claude/hooks/gh-pr-fork-guard.sh` (blocks the command with exit 2). Always use `gh pr <subcommand> --repo destinyai-dev/destinypost --base main --head <branch> ...`. Read-only `gh pr view|list|diff|checks|status` are not blocked.
 - Linting runs **only from the repo root** with `pnpm lint`.
 - Project skills live in `.claude/skills/`; per-session auto-memory in `~/.claude/projects/.../memory/`.
 
@@ -186,7 +186,7 @@ The `.mcp.json` in this repo registers a Graphify MCP server providing `mcp__gra
 ## Product Context
 
 - **Default language:** pt-BR (`react-shared-libraries/src/translation/locales/pt`). User-facing text uses full pt-BR accents.
-- **Branding:** "Robô MultiPost" — Postiz credits preserved as required by AGPL.
+- **Branding:** "DestinyPost" — Postiz credits preserved as required by AGPL.
 - **Zernio (formerly Late / getlate.dev):** TikTok and Pinterest via [Zernio API](https://docs.zernio.com/llms-full.txt) as alternative provider. Details in [`libraries/nestjs-libraries/src/integrations/social/CLAUDE.md`](libraries/nestjs-libraries/src/integrations/social/CLAUDE.md).
 - **Billing:** disabled by default (`DISABLE_BILLING=true`).
 - **Marketplace:** disabled by default (`DISABLE_MARKETPLACE=true`).
@@ -236,7 +236,7 @@ Estado atual: 14 agents preenchidos em `.context/agents/`, 10 docs preenchidos e
 ## Contexto de Produto
 
 - **Idioma padrão:** pt-BR (arquivo de tradução `pt` já existe em `react-shared-libraries/src/translation/locales/`)
-- **Branding:** "Robô MultiPost" (fork do Postiz, créditos mantidos por exigência da AGPL)
+- **Branding:** "DestinyPost" (fork do Postiz, créditos mantidos por exigência da AGPL)
 - **Integração Zernio:** TikTok e Pinterest via [Zernio API](https://docs.zernio.com/llms-full.txt) como provedor alternativo (ex-Late/getlate.dev — mesma empresa, nova marca)
 - **Billing:** desabilitado por padrão para self-hosted (`DISABLE_BILLING=true`)
 - **Marketplace:** desabilitado por padrão (`DISABLE_MARKETPLACE=true`)
