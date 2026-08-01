@@ -508,10 +508,10 @@ export class CopilotController {
                 }\n\nIMPORTANTE: Leia somente a imagem anexada. Nao use memoria, contexto antigo, exemplos, nichos provaveis ou conhecimento externo para preencher o texto.\n\nPara cada imagem, mantenha a ordem e responda nesta estrutura:\nTRANSCRICAO_LITERAL:\n- linha por linha do texto visivel, sem reescrever com outras palavras\nPARTES_ILEGIVEIS:\n- liste partes pequenas, borradas ou incertas; se nao houver, escreva "nenhuma"\nANALISE_MARKETING:\n- produto/tema, estilo, emocao, publico provavel, angulo de venda e sugestoes de copy\n\nSe o pedido do usuario for apenas "o que esta escrito", responda principalmente com TRANSCRICAO_LITERAL. Se voce nao conseguir ler a imagem, responda NAO_CONSEGUI_LER_A_IMAGEM e nao invente nenhum texto.`,
               },
               ...loadedImages.map((image) => ({
-                type: 'image_url',
+                type: 'image_url' as const,
                 image_url: {
                   url: `data:${image.contentType};base64,${image.base64}`,
-                  detail: 'high',
+                  detail: 'high' as const,
                 },
               })),
             ],
