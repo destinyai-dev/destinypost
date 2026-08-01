@@ -2,6 +2,13 @@ jest.mock('@gitroom/nestjs-libraries/integrations/integration.manager', () => ({
 jest.mock('@gitroom/nestjs-libraries/database/prisma/integrations/integration.service', () => ({
   IntegrationService: jest.fn(),
 }));
+jest.mock(
+  '@gitroom/nestjs-libraries/integrations/social/instagram-webhook-url',
+  () => ({
+    getInstagramWebhookCallbackUrl: () =>
+      'https://example.com/api/public/ig-webhook',
+  })
+);
 
 import { FlowsService } from '../flows.service';
 import { FlowsRepository } from '../flows.repository';
@@ -94,6 +101,7 @@ const mockCredentialService = {
   // flows.service resolve credenciais para CONSUMO via getRawShared (heranca
   // do perfil Default), nao getRaw.
   getRawShared: jest.fn().mockResolvedValue(null),
+  configureInstagramWebhook: jest.fn().mockResolvedValue({ ok: true }),
 } as any;
 
 const mockInstagramMessaging = {
@@ -148,6 +156,9 @@ describe('FlowsService', () => {
       ensureWebhookSubscription: mockEnsureWebhookSubscription,
     });
     mockCredentialService.getRawShared.mockResolvedValue(null);
+    mockCredentialService.configureInstagramWebhook.mockResolvedValue({
+      ok: true,
+    });
     mockInstagramMessaging.resolveIgUserToken.mockResolvedValue(null);
     mockProfileService.getProfileById.mockResolvedValue({
       id: 'profile-1',
@@ -637,7 +648,7 @@ describe('FlowsService', () => {
       );
     });
 
-    it('should auto-subscribe to webhooks when activating', async () => {
+    it('should configure the app-level webhook for Facebook Login', async () => {
       const flow = makeFlow({
         nodes: [
           { id: 'n1', type: FlowNodeType.TRIGGER },
@@ -650,15 +661,49 @@ describe('FlowsService', () => {
       await service.updateFlowStatus('org-1', 'flow-1', FlowStatus.ACTIVE);
 
       expect(mockIntegrationService.getIntegrationById).toHaveBeenCalledWith('org-1', 'int-1');
-      expect(mockIntegrationManager.getSocialIntegration).toHaveBeenCalledWith('instagram');
-      expect(mockEnsureWebhookSubscription).toHaveBeenCalledWith(
-        'page-token',
-        '123456',
-        'graph.facebook.com'
+      expect(
+        mockCredentialService.configureInstagramWebhook
+      ).toHaveBeenCalledWith(
+        'org-1',
+        'https://example.com/api/public/ig-webhook',
+        undefined
       );
+      expect(mockEnsureWebhookSubscription).not.toHaveBeenCalled();
     });
 
-    it('should block activation if webhook subscription fails', async () => {
+    it('should subscribe directly when an Instagram User token is available', async () => {
+      const flow = makeFlow({
+        nodes: [
+          { id: 'n1', type: FlowNodeType.TRIGGER },
+          { id: 'n2', type: FlowNodeType.REPLY_COMMENT },
+        ],
+      });
+      mockRepository.getFlow.mockResolvedValue(flow);
+      mockRepository.updateFlowStatus.mockResolvedValue({
+        ...flow,
+        status: FlowStatus.ACTIVE,
+      });
+      mockInstagramMessaging.resolveIgUserToken.mockResolvedValue(
+        'ig-user-token'
+      );
+
+      await service.updateFlowStatus(
+        'org-1',
+        'flow-1',
+        FlowStatus.ACTIVE
+      );
+
+      expect(mockEnsureWebhookSubscription).toHaveBeenCalledWith(
+        'ig-user-token',
+        '123456',
+        'graph.instagram.com'
+      );
+      expect(
+        mockCredentialService.configureInstagramWebhook
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should block activation if app webhook configuration fails', async () => {
       const flow = makeFlow({
         nodes: [
           { id: 'n1', type: FlowNodeType.TRIGGER },
@@ -667,11 +712,14 @@ describe('FlowsService', () => {
       });
       mockRepository.getFlow.mockResolvedValue(flow);
       mockRepository.updateFlowStatus.mockResolvedValue({ ...flow, status: FlowStatus.ACTIVE });
-      mockEnsureWebhookSubscription.mockRejectedValue(new Error('API error'));
+      mockCredentialService.configureInstagramWebhook.mockResolvedValue({
+        ok: false,
+        error: 'Meta API error',
+      });
 
       await expect(
         service.updateFlowStatus('org-1', 'flow-1', FlowStatus.ACTIVE)
-      ).rejects.toThrow('Reconecte o canal Instagram');
+      ).rejects.toThrow('Meta API error');
 
       expect(mockRepository.updateFlowStatus).not.toHaveBeenCalled();
     });

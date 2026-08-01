@@ -21,6 +21,7 @@ import {
   SaveCanvasDto,
   QuickCreateFlowDto,
 } from '@gitroom/nestjs-libraries/dtos/flows/flow.dto';
+import { getInstagramWebhookCallbackUrl } from '@gitroom/nestjs-libraries/integrations/social/instagram-webhook-url';
 
 @ApiTags('Flows')
 @Controller('/flows')
@@ -35,15 +36,6 @@ export class FlowsController {
     @GetOrgFromRequest() org: Organization,
     @GetProfileFromRequest() profile: Profile | null
   ) {
-    const rawBase = (
-      process.env.WEBHOOK_BASE_URL ||
-      process.env.FRONTEND_URL ||
-      process.env.BACKEND_URL ||
-      ''
-    ).replace(/\/$/, '');
-    const needsApiPrefix = !process.env.WEBHOOK_BASE_URL;
-    const callbackPath = `${needsApiPrefix ? '/api' : ''}/public/ig-webhook`;
-
     // Prefer per-profile verify token when the admin set a custom one in
     // Settings > Credenciais > Facebook. Falls back to the platform default
     // so that fresh installs keep working without any configuration.
@@ -53,7 +45,7 @@ export class FlowsController {
     const verifyToken = creds?.webhookVerifyToken || 'destinypost';
 
     return {
-      callbackUrl: rawBase ? `${rawBase}${callbackPath}` : callbackPath,
+      callbackUrl: getInstagramWebhookCallbackUrl(),
       verifyToken,
       subscribedFields: ['comments', 'messages'],
       object: 'instagram',

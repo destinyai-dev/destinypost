@@ -1196,15 +1196,28 @@ export class InstagramProvider
   ): Promise<boolean> {
     // For Instagram webhooks (comments, messages), subscribe the IG Business
     // account directly with instagram-specific fields.
-    const response = await this.fetch(
+    const response = await fetch(
       `https://${type}/v25.0/${igAccountId}/subscribed_apps?subscribed_fields=comments,messages&access_token=${pageAccessToken}`,
       { method: 'POST' }
     );
 
-    const body = await response.json();
-    if (body.error) {
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || body.error) {
+      const error = body?.error || {};
+      const detail = [
+        error.message,
+        error.code != null ? `code=${error.code}` : null,
+        error.error_subcode != null
+          ? `subcode=${error.error_subcode}`
+          : null,
+        error.type,
+      ]
+        .filter(Boolean)
+        .join(' ');
       throw new Error(
-        `Webhook subscription failed: ${body.error.message || JSON.stringify(body.error)}`
+        `Webhook subscription failed (${response.status}, host=${type}): ${
+          detail || JSON.stringify(body)
+        }`
       );
     }
 

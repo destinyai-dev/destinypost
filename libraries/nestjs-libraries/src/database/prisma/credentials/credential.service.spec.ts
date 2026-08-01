@@ -337,4 +337,48 @@ describe('CredentialService', () => {
       expect(orgRepository.getShareProviderCredentials).not.toHaveBeenCalled();
     });
   });
+
+  describe('configureInstagramWebhook', () => {
+    const realFetch = global.fetch;
+
+    afterEach(() => {
+      global.fetch = realFetch;
+    });
+
+    it('configura comments e messages na versao atual da Graph API', async () => {
+      repository.findByProvider.mockResolvedValueOnce(
+        buildExistingRecord({
+          clientId: 'app-id',
+          clientSecret: 'app-secret',
+          webhookVerifyToken: 'verify-me',
+        }) as any
+      );
+      const fetchMock = jest.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ success: true }),
+      });
+      global.fetch = fetchMock as any;
+
+      await expect(
+        service.configureInstagramWebhook(
+          'org-1',
+          'https://social.example.com/api/public/ig-webhook'
+        )
+      ).resolves.toEqual({ ok: true });
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://graph.facebook.com/v25.0/app-id/subscriptions',
+        expect.objectContaining({ method: 'POST' })
+      );
+      const request = fetchMock.mock.calls[0][1] as RequestInit;
+      const params = new URLSearchParams(request.body as string);
+      expect(params.get('object')).toBe('instagram');
+      expect(params.get('callback_url')).toBe(
+        'https://social.example.com/api/public/ig-webhook'
+      );
+      expect(params.get('verify_token')).toBe('verify-me');
+      expect(params.get('fields')).toBe('comments,messages');
+    });
+  });
 });

@@ -282,4 +282,29 @@ describe('InstagramProvider.getMediaMetadata', () => {
     );
   });
 
+  it('preserva a mensagem e o codigo retornados pela Meta ao falhar', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({
+        error: {
+          message: 'Application does not have the capability',
+          type: 'OAuthException',
+          code: 3,
+        },
+      }),
+    });
+    global.fetch = fetchMock as any;
+
+    await expect(
+      provider.ensureWebhookSubscription(
+        'TOKEN',
+        'IG_ACCOUNT_ID',
+        'graph.facebook.com'
+      )
+    ).rejects.toThrow(
+      /Application does not have the capability code=3 OAuthException/
+    );
+  });
+
 });

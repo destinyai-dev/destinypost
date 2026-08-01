@@ -34,6 +34,7 @@ import type { InstagramProvider } from '@gitroom/nestjs-libraries/integrations/s
 import { CredentialService } from '@gitroom/nestjs-libraries/database/prisma/credentials/credential.service';
 import { InstagramMessagingService } from '@gitroom/nestjs-libraries/integrations/social/instagram-messaging.service';
 import { resolveIgRoute } from '@gitroom/nestjs-libraries/integrations/social/instagram-route.resolver';
+import { getInstagramWebhookCallbackUrl } from '@gitroom/nestjs-libraries/integrations/social/instagram-webhook-url';
 import { EncryptionService } from '@gitroom/nestjs-libraries/crypto/encryption.service';
 import { StatusEventService } from '@gitroom/nestjs-libraries/database/prisma/status/status-event.service';
 import { decryptIntegrationToken } from '@gitroom/nestjs-libraries/crypto/integration-token.helper';
@@ -562,6 +563,36 @@ export class FlowsService {
         this._instagramMessaging
       );
 
+      if (route.host === 'graph.facebook.com') {
+        const callbackUrl = getInstagramWebhookCallbackUrl();
+        if (!callbackUrl.startsWith('https://')) {
+          throw new Error(
+            `Callback do webhook invalido: ${callbackUrl}. Configure WEBHOOK_BASE_URL com o dominio HTTPS da instalacao.`
+          );
+        }
+
+        // Facebook Login uses a Page access token. With the current Meta Use
+        // Cases model, POST /{ig-id}/subscribed_apps rejects this token with
+        // code 3 even when instagram_manage_comments/messages were granted.
+        // The supported operation is the app-level Instagram subscription.
+        const configured =
+          await this._credentialService.configureInstagramWebhook(
+            integration.organizationId,
+            callbackUrl,
+            integration.profileId ?? undefined
+          );
+        if (!configured.ok) {
+          throw new Error(
+            configured.error || 'A Meta recusou a configuracao do webhook.'
+          );
+        }
+
+        this._logger.log(
+          `App-level Instagram webhook ensured for integration ${integrationId}`
+        );
+        return true;
+      }
+
       await provider.ensureWebhookSubscription(
         route.token,
         integration.internalId,
@@ -580,7 +611,7 @@ export class FlowsService {
       if (strict) {
         throw new BadRequestException(
           'Nao foi possivel ativar os eventos de comentarios da Meta. ' +
-            'Reconecte o canal Instagram para conceder instagram_manage_comments e instagram_manage_messages. ' +
+            'Verifique as credenciais, permissoes e o webhook do app Meta. ' +
             `Detalhe: ${reason}`
         );
       }

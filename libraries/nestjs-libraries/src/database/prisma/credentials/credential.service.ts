@@ -162,7 +162,11 @@ export class CredentialService {
     callbackUrl: string,
     profileId?: string
   ): Promise<{ ok: boolean; error?: string }> {
-    const creds = await this.getRaw(organizationId, 'facebook', profileId);
+    const creds = await this.getRawShared(
+      organizationId,
+      'facebook',
+      profileId
+    );
     // Prefer Instagram App credentials when the workspace uses the "Instagram
     // API with Instagram Login" product — Meta expects the Instagram app ID
     // and secret there. Falls back to the Facebook App credentials for
@@ -190,7 +194,7 @@ export class CredentialService {
         access_token: appAccessToken,
       });
       const res = await fetch(
-        `https://graph.facebook.com/v20.0/${appId}/subscriptions`,
+        `https://graph.facebook.com/v25.0/${appId}/subscriptions`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
