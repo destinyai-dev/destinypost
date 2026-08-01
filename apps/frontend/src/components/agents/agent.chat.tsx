@@ -337,8 +337,9 @@ const NewInput: FC<InputProps> = (props) => {
     }
 
     const send = props.onSend(
-      text +
-        imageAnalysis +
+      imageAnalysis +
+        (imageAnalysis ? '\n\n' : '') +
+        text +
         (attachments.length > 0
           ? '\n[--Media--]' +
             attachments
