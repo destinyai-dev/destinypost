@@ -1204,6 +1204,7 @@ export class FlowsService {
     igMediaId: string;
     commentText: string;
     organizationId: string;
+    commentCreatedAt?: Date;
   }) {
     let activeFlows =
       await this._flowsRepository.getActiveFlowsForIntegration(
@@ -1239,6 +1240,12 @@ export class FlowsService {
 
     // Filter flows that monitor this specific media (or all posts)
     let matchingFlows = activeFlows.filter((flow) => {
+      if (
+        payload.commentCreatedAt &&
+        flow.updatedAt > payload.commentCreatedAt
+      ) {
+        return false;
+      }
       // Defense-in-depth: a flow still pending in next_publication must NOT
       // fire as "all posts" — skip it entirely if the bind didn't take.
       if (this.isPendingNextPublication(flow, 'comment_on_post')) return false;

@@ -57,6 +57,8 @@ import { GoogleProvider } from '@gitroom/backend/services/auth/providers/google.
 import { FarcasterProvider } from '@gitroom/backend/services/auth/providers/farcaster.provider';
 import { WalletProvider } from '@gitroom/backend/services/auth/providers/wallet.provider';
 import { OauthProvider } from '@gitroom/backend/services/auth/providers/oauth.provider';
+import { ScheduleModule } from '@nestjs/schedule';
+import { InstagramCommentPollingService } from '@gitroom/backend/services/instagram-comment-polling.service';
 
 const authenticatedController = [
   UsersController,
@@ -91,7 +93,7 @@ const authenticatedController = [
   RepostController,
 ];
 @Module({
-  imports: [UploadModule, AiModule],
+  imports: [UploadModule, AiModule, ScheduleModule.forRoot()],
   controllers: [
     RootController,
     StripeController,
@@ -123,6 +125,7 @@ const authenticatedController = [
     FarcasterProvider,
     WalletProvider,
     OauthProvider,
+    InstagramCommentPollingService,
   ],
   get exports() {
     return [...this.imports, ...this.providers];
