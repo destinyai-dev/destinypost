@@ -71,8 +71,6 @@ const mockTemporalService = {
 } as any;
 
 const mockEnsureWebhookSubscription = jest.fn().mockResolvedValue(true);
-const mockEnsurePageWebhookSubscription = jest.fn().mockResolvedValue(true);
-const mockGetPageIdForIgAccount = jest.fn().mockResolvedValue('page-1');
 const mockIntegrationService = {
   getIntegrationById: jest.fn().mockResolvedValue({
     id: 'int-1',
@@ -137,8 +135,6 @@ describe('FlowsService', () => {
     mockWorkflowStart.mockResolvedValue({ workflowId: 'wf-1' });
     mockTemporalService.client.getRawClient.mockReturnValue(mockRawClient);
     mockEnsureWebhookSubscription.mockResolvedValue(true);
-    mockEnsurePageWebhookSubscription.mockResolvedValue(true);
-    mockGetPageIdForIgAccount.mockResolvedValue('page-1');
     mockPostsRepository.getPostById.mockResolvedValue(null);
     mockIntegrationService.getIntegrationById.mockResolvedValue({
       id: 'int-1',
@@ -150,8 +146,6 @@ describe('FlowsService', () => {
     });
     mockIntegrationManager.getSocialIntegration.mockReturnValue({
       ensureWebhookSubscription: mockEnsureWebhookSubscription,
-      ensurePageWebhookSubscription: mockEnsurePageWebhookSubscription,
-      getPageIdForIgAccount: mockGetPageIdForIgAccount,
     });
     mockCredentialService.getRawShared.mockResolvedValue(null);
     mockInstagramMessaging.resolveIgUserToken.mockResolvedValue(null);
@@ -657,14 +651,9 @@ describe('FlowsService', () => {
 
       expect(mockIntegrationService.getIntegrationById).toHaveBeenCalledWith('org-1', 'int-1');
       expect(mockIntegrationManager.getSocialIntegration).toHaveBeenCalledWith('instagram');
-      expect(mockGetPageIdForIgAccount).toHaveBeenCalledWith(
+      expect(mockEnsureWebhookSubscription).toHaveBeenCalledWith(
         'page-token',
         '123456',
-        'graph.facebook.com'
-      );
-      expect(mockEnsurePageWebhookSubscription).toHaveBeenCalledWith(
-        'page-token',
-        'page-1',
         'graph.facebook.com'
       );
     });
@@ -678,7 +667,7 @@ describe('FlowsService', () => {
       });
       mockRepository.getFlow.mockResolvedValue(flow);
       mockRepository.updateFlowStatus.mockResolvedValue({ ...flow, status: FlowStatus.ACTIVE });
-      mockEnsurePageWebhookSubscription.mockRejectedValue(new Error('API error'));
+      mockEnsureWebhookSubscription.mockRejectedValue(new Error('API error'));
 
       await expect(
         service.updateFlowStatus('org-1', 'flow-1', FlowStatus.ACTIVE)

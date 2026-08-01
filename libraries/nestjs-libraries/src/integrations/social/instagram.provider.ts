@@ -68,8 +68,6 @@ export class InstagramProvider
     'instagram_manage_comments',
     'instagram_manage_insights',
     'instagram_manage_messages',
-    'pages_manage_metadata',
-    'pages_messaging',
   ];
   override maxConcurrentJob = 400;
   editor = 'normal' as const;
@@ -1240,27 +1238,6 @@ export class InstagramProvider
     return { subscribed: apps.length > 0, fields };
   }
 
-  async getPageIdForIgAccount(
-    pageAccessToken: string,
-    igAccountId: string,
-    type = 'graph.facebook.com'
-  ): Promise<string | null> {
-    try {
-      // The page access token is scoped to a specific page.
-      // We can get the page ID by calling /me with the page token.
-      const response = await this.fetch(
-        `https://${type}/v25.0/me?fields=id&access_token=${pageAccessToken}`
-      );
-      const body = await response.json();
-      if (body.id) {
-        return body.id;
-      }
-      return null;
-    } catch {
-      return null;
-    }
-  }
-
   async ensureWebhookSubscription(
     pageAccessToken: string,
     igAccountId: string,
@@ -1268,26 +1245,6 @@ export class InstagramProvider
   ): Promise<boolean> {
     // Instagram webhooks are subscribed directly on the IG account, not the Page.
     return this.subscribeToWebhooks(igAccountId, pageAccessToken, type);
-  }
-
-  async ensurePageWebhookSubscription(
-    pageAccessToken: string,
-    pageId: string,
-    type = 'graph.facebook.com'
-  ): Promise<boolean> {
-    const response = await this.fetch(
-      `https://${type}/v25.0/${pageId}/subscribed_apps?subscribed_fields=feed,messages,messaging_postbacks&access_token=${pageAccessToken}`,
-      { method: 'POST' }
-    );
-    const body = await response.json();
-    if (body.error) {
-      throw new Error(
-        `Page webhook subscription failed: ${
-          body.error.message || JSON.stringify(body.error)
-        }`
-      );
-    }
-    return body.success === true;
   }
 
   async getMediaMetadata(

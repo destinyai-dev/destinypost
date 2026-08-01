@@ -246,13 +246,19 @@ describe('InstagramProvider.getMediaMetadata', () => {
     ).rejects.toThrow(/Meta token exchange failed/);
   });
 
-  it('solicita as permissoes necessarias para assinar a Pagina', () => {
+  it('solicita apenas permissoes aceitas pelo login do Instagram', () => {
     expect(provider.scopes).toEqual(
+      expect.arrayContaining([
+        'instagram_manage_comments',
+        'instagram_manage_messages',
+      ])
+    );
+    expect(provider.scopes).not.toEqual(
       expect.arrayContaining(['pages_manage_metadata', 'pages_messaging'])
     );
   });
 
-  it('assina feed e mensagens na Pagina vinculada', async () => {
+  it('assina comentarios e mensagens diretamente na conta Instagram', async () => {
     const fetchMock = jest.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -261,16 +267,16 @@ describe('InstagramProvider.getMediaMetadata', () => {
     global.fetch = fetchMock as any;
 
     await expect(
-      provider.ensurePageWebhookSubscription(
+      provider.ensureWebhookSubscription(
         'PAGE_TOKEN',
-        'PAGE_ID',
+        'IG_ACCOUNT_ID',
         'graph.facebook.com'
       )
     ).resolves.toBe(true);
 
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining(
-        'PAGE_ID/subscribed_apps?subscribed_fields=feed,messages,messaging_postbacks'
+        'IG_ACCOUNT_ID/subscribed_apps?subscribed_fields=comments,messages'
       ),
       { method: 'POST' }
     );

@@ -562,27 +562,11 @@ export class FlowsService {
         this._instagramMessaging
       );
 
-      if (route.source === 'page-access-token') {
-        const pageId = await provider.getPageIdForIgAccount(
-          route.token,
-          integration.internalId,
-          route.host
-        );
-        if (!pageId) {
-          throw new Error('Nao foi possivel identificar a Pagina do Facebook vinculada');
-        }
-        await provider.ensurePageWebhookSubscription(
-          route.token,
-          pageId,
-          route.host
-        );
-      } else {
-        await provider.ensureWebhookSubscription(
-          route.token,
-          integration.internalId,
-          route.host
-        );
-      }
+      await provider.ensureWebhookSubscription(
+        route.token,
+        integration.internalId,
+        route.host
+      );
 
       this._logger.log(
         `Webhook subscription ensured for integration ${integrationId}`
@@ -596,7 +580,7 @@ export class FlowsService {
       if (strict) {
         throw new BadRequestException(
           'Nao foi possivel ativar os eventos de comentarios da Meta. ' +
-            'Reconecte o canal Instagram para conceder pages_manage_metadata e pages_messaging. ' +
+            'Reconecte o canal Instagram para conceder instagram_manage_comments e instagram_manage_messages. ' +
             `Detalhe: ${reason}`
         );
       }
