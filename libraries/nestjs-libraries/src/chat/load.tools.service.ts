@@ -84,6 +84,7 @@ export class LoadToolsService {
         - Treat [--ImageAnalysis--] as the visual ground truth for the attached images: visible text, objects, style, audience, offer and copy angles.
         - If the user asks what is written in an image, answer from the OCR/transcription in [--ImageAnalysis--] and do not invent, rewrite or use older conversation context as if it came from the image.
         - If the OCR says a word is illegible or approximate, preserve that uncertainty instead of guessing.
+        - If [--ImageAnalysis--] contains NAO_CONSEGUI_LER_A_IMAGEM, tell the user the image could not be read reliably and ask for a higher-resolution image; do not invent an OCR result.
         - Never answer "I cannot see the image" when [--ImageAnalysis--] is present. Use the analysis to write copy, captions, ads, hooks, carousel structure or improvement suggestions.
         - If the block says the visual analysis failed, explain that the configured text model must support vision/multimodal input and ask the user to configure a vision-capable model in Settings > AI Models > Text.
 

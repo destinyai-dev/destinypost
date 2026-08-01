@@ -376,7 +376,7 @@ export class CopilotController {
           {
             role: 'system',
             content:
-              'Voce e um analisador visual e OCR para marketing em redes sociais. Sua prioridade e transcrever literalmente o texto visivel nas imagens. Nunca invente texto, nunca use contexto anterior para preencher partes ilegíveis e nunca troque a oferta por uma ideia parecida. Se algo estiver pequeno ou borrado, marque como "ilegivel" ou "aproximado". Depois da transcricao, analise criativo, nicho, oferta, promessa, estilo visual, publico-alvo e oportunidades de copy. Responda sempre em portugues do Brasil, de forma objetiva e util para um agente criar legendas, anuncios e posts.',
+              'Voce e um mecanismo rigoroso de OCR e analise visual para marketing. Sua prioridade absoluta e transcrever literalmente o texto visivel nas imagens. E proibido inventar texto, inferir pelo contexto, usar historico da conversa, usar nome de dominio, usar nome do arquivo ou trocar a oferta por uma ideia parecida. Se nao conseguir ler a imagem com seguranca, escreva exatamente: NAO_CONSEGUI_LER_A_IMAGEM. Se uma palavra estiver pequena ou borrada, marque como "[ilegivel]" ou "[aproximado]". Depois da transcricao literal, analise criativo, nicho, oferta, promessa, estilo visual, publico-alvo e oportunidades de copy. Responda sempre em portugues do Brasil.',
           },
           {
             role: 'user',
@@ -386,17 +386,19 @@ export class CopilotController {
                 text: `Pedido do usuario: ${
                   body?.prompt?.trim() ||
                   'Analise as imagens e descreva o que aparece nelas para criar copy de marketing.'
-                }\n\nPara cada imagem, mantenha a ordem e responda nesta estrutura:\n1. Transcricao literal do texto visivel, linha por linha. Nao reescreva com outras palavras.\n2. Partes ilegíveis ou aproximadas, se houver.\n3. Produto/tema, estilo, emocao, publico provavel, angulo de venda e sugestoes de copy.\n\nSe o pedido do usuario for apenas "o que esta escrito", responda principalmente com a transcricao literal.`,
+                }\n\nIMPORTANTE: Leia somente a imagem anexada. Nao use memoria, contexto antigo, exemplos, nichos provaveis ou conhecimento externo para preencher o texto.\n\nPara cada imagem, mantenha a ordem e responda nesta estrutura:\nTRANSCRICAO_LITERAL:\n- linha por linha do texto visivel, sem reescrever com outras palavras\nPARTES_ILEGIVEIS:\n- liste partes pequenas, borradas ou incertas; se nao houver, escreva "nenhuma"\nANALISE_MARKETING:\n- produto/tema, estilo, emocao, publico provavel, angulo de venda e sugestoes de copy\n\nSe o pedido do usuario for apenas "o que esta escrito", responda principalmente com TRANSCRICAO_LITERAL. Se voce nao conseguir ler a imagem, responda NAO_CONSEGUI_LER_A_IMAGEM e nao invente nenhum texto.`,
               },
               ...loadedImages.map((image) => ({
                 type: 'image_url',
                 image_url: {
                   url: `data:${image.contentType};base64,${image.base64}`,
+                  detail: 'high',
                 },
               })),
             ],
           },
         ],
+        temperature: 0,
       });
 
       const analysis =
