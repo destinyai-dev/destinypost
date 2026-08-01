@@ -36,6 +36,8 @@ import { InstagramStrategyService } from '@gitroom/nestjs-libraries/ai/instagram
 import { InstagramBrandDna } from '@gitroom/nestjs-libraries/ai/ai-text.service';
 import { MediaService } from '@gitroom/nestjs-libraries/database/prisma/media/media.service';
 import { loadFromUrlOrDataUrl } from '@gitroom/nestjs-libraries/upload/storage.helpers';
+import { readFile } from 'fs/promises';
+import { extname, resolve, sep } from 'path';
 
 export type ChannelsContext = {
   integrations: string;
@@ -164,7 +166,9 @@ export class CopilotController {
     contentType: string;
     base64: string;
   }> {
-    const image = await loadFromUrlOrDataUrl(path);
+    const image =
+      (await this.loadLocalUploadImageData(path)) ||
+      (await loadFromUrlOrDataUrl(path));
     if (!image.contentType.toLowerCase().startsWith('image/')) {
       throw new HttpException('O arquivo anexado nao e uma imagem.', 400);
     }
@@ -181,6 +185,84 @@ export class CopilotController {
       contentType: image.contentType,
       base64: image.buffer.toString('base64'),
     };
+  }
+
+  private contentTypeFromExtension(path: string) {
+    const ext = extname(path).toLowerCase();
+    const map: Record<string, string> = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.webp': 'image/webp',
+      '.gif': 'image/gif',
+      '.avif': 'image/avif',
+      '.bmp': 'image/bmp',
+      '.svg': 'image/svg+xml',
+    };
+    return map[ext] || 'application/octet-stream';
+  }
+
+  private getLocalUploadRelativePath(path: string): string | undefined {
+    const frontendUrl = process.env.FRONTEND_URL;
+    try {
+      if (/^https:\/\//i.test(path) && frontendUrl) {
+        const imageUrl = new URL(path);
+        const appUrl = new URL(frontendUrl);
+        if (
+          imageUrl.origin === appUrl.origin &&
+          imageUrl.pathname.startsWith('/uploads/')
+        ) {
+          return decodeURIComponent(imageUrl.pathname.replace('/uploads/', ''));
+        }
+      }
+
+      if (path.startsWith('/uploads/')) {
+        return decodeURIComponent(path.replace('/uploads/', ''));
+      }
+    } catch {
+      return undefined;
+    }
+
+    return undefined;
+  }
+
+  private async loadLocalUploadImageData(path: string): Promise<{
+    buffer: Buffer;
+    contentType: string;
+    extension: string;
+  } | null> {
+    const uploadDirectory = process.env.UPLOAD_DIRECTORY;
+    if (!uploadDirectory) {
+      return null;
+    }
+
+    const relativePath = this.getLocalUploadRelativePath(path);
+    if (!relativePath) {
+      return null;
+    }
+
+    const root = resolve(uploadDirectory);
+    const filePath = resolve(root, relativePath);
+    if (filePath !== root && !filePath.startsWith(root + sep)) {
+      throw new HttpException('Caminho de imagem invalido.', 400);
+    }
+
+    try {
+      const buffer = await readFile(filePath);
+      const contentType = this.contentTypeFromExtension(filePath);
+      return {
+        buffer,
+        contentType,
+        extension: contentType.split('/')[1]?.split('+')[0] || 'bin',
+      };
+    } catch (err) {
+      this._logger.warn(
+        `Nao foi possivel ler upload local para OCR (${filePath}): ${
+          (err as Error).message
+        }`
+      );
+      return null;
+    }
   }
 
   // Limite explicito de 30/min (o global e 30/h) — cada chamada de chat

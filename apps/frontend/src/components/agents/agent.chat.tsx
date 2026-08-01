@@ -330,7 +330,7 @@ const NewInput: FC<InputProps> = (props) => {
         imageAnalysis = await buildImageAnalysis(text, attachments);
       } catch (error) {
         toaster.show((error as Error).message, 'warning');
-        imageAnalysis = `\n\n[--ImageAnalysis--]\nNao foi possivel analisar automaticamente as imagens anexadas: ${(error as Error).message}\n[--ImageAnalysis--]`;
+        imageAnalysis = `\n\n[--ImageAnalysis--]\nNAO_CONSEGUI_LER_A_IMAGEM\nNao foi possivel analisar automaticamente as imagens anexadas: ${(error as Error).message}\nNao tente ler os links do bloco [--Media--] nem invente o texto da imagem. Explique que a leitura visual automatica falhou e peca uma imagem em maior resolucao ou um modelo de texto com suporte real a visao.\n[--ImageAnalysis--]`;
       } finally {
         setMediaAnalysisInProgress(false);
       }
