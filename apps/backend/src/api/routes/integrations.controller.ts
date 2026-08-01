@@ -38,6 +38,7 @@ import { ProfileService } from '@gitroom/nestjs-libraries/database/prisma/profil
 import { getOrgRole } from '@gitroom/nestjs-libraries/user/org.role';
 import { EncryptionService } from '@gitroom/nestjs-libraries/crypto/encryption.service';
 import { decryptIntegrationToken } from '@gitroom/nestjs-libraries/crypto/integration-token.helper';
+import { FlowsService } from '@gitroom/nestjs-libraries/database/prisma/flows/flows.service';
 
 @ApiTags('Integrations')
 @Controller('/integrations')
@@ -49,7 +50,8 @@ export class IntegrationsController {
     private _refreshIntegrationService: RefreshIntegrationService,
     private _organizationService: OrganizationService,
     private _profileService: ProfileService,
-    private _encryption: EncryptionService
+    private _encryption: EncryptionService,
+    private _flowsService: FlowsService
   ) {}
 
   @Post('/provider/:id/connect')
@@ -59,7 +61,14 @@ export class IntegrationsController {
     @Param('id') id: string,
     @Body() body: any
   ) {
-    return this._integrationService.saveProviderPage(org.id, id, body);
+    const result = await this._integrationService.saveProviderPage(
+      org.id,
+      id,
+      body
+    );
+
+    await this._flowsService.ensureIntegrationWebhookSubscription(org.id, id);
+    return result;
   }
 
   @Get('/:identifier/internal-plugs')

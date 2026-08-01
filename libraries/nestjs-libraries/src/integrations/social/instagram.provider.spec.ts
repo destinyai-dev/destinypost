@@ -246,4 +246,34 @@ describe('InstagramProvider.getMediaMetadata', () => {
     ).rejects.toThrow(/Meta token exchange failed/);
   });
 
+  it('solicita as permissoes necessarias para assinar a Pagina', () => {
+    expect(provider.scopes).toEqual(
+      expect.arrayContaining(['pages_manage_metadata', 'pages_messaging'])
+    );
+  });
+
+  it('assina feed e mensagens na Pagina vinculada', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true }),
+    });
+    global.fetch = fetchMock as any;
+
+    await expect(
+      provider.ensurePageWebhookSubscription(
+        'PAGE_TOKEN',
+        'PAGE_ID',
+        'graph.facebook.com'
+      )
+    ).resolves.toBe(true);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'PAGE_ID/subscribed_apps?subscribed_fields=feed,messages,messaging_postbacks'
+      ),
+      { method: 'POST' }
+    );
+  });
+
 });

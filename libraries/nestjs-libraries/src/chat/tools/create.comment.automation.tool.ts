@@ -35,6 +35,8 @@ pode responder publicamente e/ou enviar uma mensagem direta (DM) com um link/bot
 Use postMode='next_publication' (padrao) para encadear: crie a automacao e ela se
 conecta sozinha ao PROXIMO post publicado no canal — sem precisar do id de midia.
 Use postMode='specific' apenas quando ja tiver os ids de midia (postIds/storyIds).
+postIds pode receber o ID interno retornado ao publicar pelo DestinyPost; o
+backend o converte para o ID real da midia no Instagram antes de salvar.
 Sempre confirme com o usuario o conteudo (gatilho, palavras-chave, resposta, DM,
 link) ANTES de criar a automacao.
 `,
@@ -56,7 +58,9 @@ link) ANTES de criar a automacao.
         postIds: z
           .array(z.string())
           .optional()
-          .describe('IDs de midia do Instagram quando postMode=specific (comment_on_post)'),
+          .describe(
+            'IDs de midia do Instagram ou IDs internos de posts publicados pelo DestinyPost quando postMode=specific (comment_on_post)'
+          ),
         storyIds: z
           .array(z.string())
           .optional()

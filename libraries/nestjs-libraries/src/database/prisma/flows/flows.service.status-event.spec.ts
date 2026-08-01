@@ -49,7 +49,8 @@ const buildService = (repo: any, statusEvent: any) =>
     null as any, // instagramMessaging
     null as any, // profileService
     {} as any, // encryption
-    statusEvent as any
+    statusEvent as any,
+    null as any // postsRepository
   );
 
 describe('FlowsService.updateExecution (StatusEvent AUTOMATION_FAILED)', () => {

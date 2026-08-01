@@ -71,6 +71,8 @@ const mockTemporalService = {
 } as any;
 
 const mockEnsureWebhookSubscription = jest.fn().mockResolvedValue(true);
+const mockEnsurePageWebhookSubscription = jest.fn().mockResolvedValue(true);
+const mockGetPageIdForIgAccount = jest.fn().mockResolvedValue('page-1');
 const mockIntegrationService = {
   getIntegrationById: jest.fn().mockResolvedValue({
     id: 'int-1',
@@ -109,6 +111,10 @@ const mockProfileService = {
     .mockResolvedValue({ id: 'default-profile', organizationId: 'org-1', isDefault: true }),
 } as any;
 
+const mockPostsRepository = {
+  getPostById: jest.fn().mockResolvedValue(null),
+} as any;
+
 const makeFlow = (overrides?: Record<string, any>): any => ({
   id: 'flow-1',
   organizationId: 'org-1',
@@ -131,6 +137,9 @@ describe('FlowsService', () => {
     mockWorkflowStart.mockResolvedValue({ workflowId: 'wf-1' });
     mockTemporalService.client.getRawClient.mockReturnValue(mockRawClient);
     mockEnsureWebhookSubscription.mockResolvedValue(true);
+    mockEnsurePageWebhookSubscription.mockResolvedValue(true);
+    mockGetPageIdForIgAccount.mockResolvedValue('page-1');
+    mockPostsRepository.getPostById.mockResolvedValue(null);
     mockIntegrationService.getIntegrationById.mockResolvedValue({
       id: 'int-1',
       token: 'page-token',
@@ -141,6 +150,8 @@ describe('FlowsService', () => {
     });
     mockIntegrationManager.getSocialIntegration.mockReturnValue({
       ensureWebhookSubscription: mockEnsureWebhookSubscription,
+      ensurePageWebhookSubscription: mockEnsurePageWebhookSubscription,
+      getPageIdForIgAccount: mockGetPageIdForIgAccount,
     });
     mockCredentialService.getRawShared.mockResolvedValue(null);
     mockInstagramMessaging.resolveIgUserToken.mockResolvedValue(null);
@@ -166,7 +177,8 @@ describe('FlowsService', () => {
       mockInstagramMessaging,
       mockProfileService,
       {} as any,
-      mockStatusEventService as any // statusEventService
+      mockStatusEventService as any, // statusEventService
+      mockPostsRepository
     );
   });
 
@@ -430,6 +442,69 @@ describe('FlowsService', () => {
     });
   });
 
+  describe('normalizeSpecificMediaIds', () => {
+    it('converte o id interno publicado para o releaseId do Instagram', async () => {
+      mockPostsRepository.getPostById.mockResolvedValue({
+        id: 'post-interno',
+        integrationId: 'int-1',
+        state: 'PUBLISHED',
+        releaseId: 'ig-media-123',
+      });
+
+      const body = await (service as any).normalizeSpecificMediaIds(
+        'org-1',
+        'int-1',
+        {
+          name: 'X',
+          integrationId: 'int-1',
+          postMode: 'specific',
+          postIds: ['post-interno'],
+        }
+      );
+
+      expect(body.postIds).toEqual(['ig-media-123']);
+      expect(mockPostsRepository.getPostById).toHaveBeenCalledWith(
+        'post-interno',
+        'org-1'
+      );
+    });
+
+    it('preserva ids externos que nao sao posts internos', async () => {
+      mockPostsRepository.getPostById.mockResolvedValue(null);
+
+      const body = await (service as any).normalizeSpecificMediaIds(
+        'org-1',
+        'int-1',
+        {
+          name: 'X',
+          integrationId: 'int-1',
+          postMode: 'specific',
+          postIds: ['18104924318149447'],
+        }
+      );
+
+      expect(body.postIds).toEqual(['18104924318149447']);
+    });
+
+    it('rejeita post interno ainda sem releaseId confirmado', async () => {
+      mockPostsRepository.getPostById.mockResolvedValue({
+        id: 'post-interno',
+        integrationId: 'int-1',
+        state: 'QUEUE',
+        releaseId: null,
+      });
+
+      await expect(
+        (service as any).normalizeSpecificMediaIds('org-1', 'int-1', {
+          name: 'X',
+          integrationId: 'int-1',
+          postMode: 'specific',
+          postIds: ['post-interno'],
+        })
+      ).rejects.toThrow('ainda nao possui um ID confirmado pelo Instagram');
+    });
+  });
+
   describe('quickCreateFlow - escopo de perfil (nunca salva null)', () => {
     const passWebhook = () =>
       jest.fn().mockResolvedValue({
@@ -582,10 +657,19 @@ describe('FlowsService', () => {
 
       expect(mockIntegrationService.getIntegrationById).toHaveBeenCalledWith('org-1', 'int-1');
       expect(mockIntegrationManager.getSocialIntegration).toHaveBeenCalledWith('instagram');
-      expect(mockEnsureWebhookSubscription).toHaveBeenCalledWith('page-token', '123456');
+      expect(mockGetPageIdForIgAccount).toHaveBeenCalledWith(
+        'page-token',
+        '123456',
+        'graph.facebook.com'
+      );
+      expect(mockEnsurePageWebhookSubscription).toHaveBeenCalledWith(
+        'page-token',
+        'page-1',
+        'graph.facebook.com'
+      );
     });
 
-    it('should not block activation if webhook subscription fails', async () => {
+    it('should block activation if webhook subscription fails', async () => {
       const flow = makeFlow({
         nodes: [
           { id: 'n1', type: FlowNodeType.TRIGGER },
@@ -594,17 +678,13 @@ describe('FlowsService', () => {
       });
       mockRepository.getFlow.mockResolvedValue(flow);
       mockRepository.updateFlowStatus.mockResolvedValue({ ...flow, status: FlowStatus.ACTIVE });
-      mockEnsureWebhookSubscription.mockRejectedValue(new Error('API error'));
+      mockEnsurePageWebhookSubscription.mockRejectedValue(new Error('API error'));
 
-      await service.updateFlowStatus('org-1', 'flow-1', FlowStatus.ACTIVE);
+      await expect(
+        service.updateFlowStatus('org-1', 'flow-1', FlowStatus.ACTIVE)
+      ).rejects.toThrow('Reconecte o canal Instagram');
 
-      // Should still activate the flow despite webhook failure
-      expect(mockRepository.updateFlowStatus).toHaveBeenCalledWith(
-        'org-1',
-        'flow-1',
-        FlowStatus.ACTIVE,
-        undefined
-      );
+      expect(mockRepository.updateFlowStatus).not.toHaveBeenCalled();
     });
 
     it('should reject activation when flow has no nodes', async () => {

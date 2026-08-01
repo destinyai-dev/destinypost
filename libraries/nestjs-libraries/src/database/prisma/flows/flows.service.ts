@@ -37,6 +37,7 @@ import { resolveIgRoute } from '@gitroom/nestjs-libraries/integrations/social/in
 import { EncryptionService } from '@gitroom/nestjs-libraries/crypto/encryption.service';
 import { StatusEventService } from '@gitroom/nestjs-libraries/database/prisma/status/status-event.service';
 import { decryptIntegrationToken } from '@gitroom/nestjs-libraries/crypto/integration-token.helper';
+import { PostsRepository } from '@gitroom/nestjs-libraries/database/prisma/posts/posts.repository';
 import * as crypto from 'crypto';
 
 // Janela de 24h da Meta para trocar mensagens apos interacao do usuario.
@@ -56,7 +57,8 @@ export class FlowsService {
     private _instagramMessaging: InstagramMessagingService,
     private _profileService: ProfileService,
     private _encryption: EncryptionService,
-    private _statusEventService: StatusEventService
+    private _statusEventService: StatusEventService,
+    private _postsRepository: PostsRepository
   ) {}
 
   /**
@@ -517,23 +519,31 @@ export class FlowsService {
       }
 
       // Auto-subscribe to Instagram webhooks when activating
-      await this.ensureWebhookSubscription(orgId, flow.integrationId);
+      await this.ensureWebhookSubscription(orgId, flow.integrationId, true);
     }
 
     return this._flowsRepository.updateFlowStatus(orgId, id, status, profileId);
   }
 
-  private async ensureWebhookSubscription(
+  async ensureIntegrationWebhookSubscription(
     orgId: string,
     integrationId: string
-  ) {
+  ): Promise<boolean> {
+    return this.ensureWebhookSubscription(orgId, integrationId);
+  }
+
+  private async ensureWebhookSubscription(
+    orgId: string,
+    integrationId: string,
+    strict = false
+  ): Promise<boolean> {
     try {
       const integration = await this._integrationService.getIntegrationById(
         orgId,
         integrationId
       );
       if (!integration || integration.providerIdentifier !== 'instagram') {
-        return;
+        return false;
       }
       integration.token = decryptIntegrationToken(
         this._encryption,
@@ -544,26 +554,53 @@ export class FlowsService {
         'instagram'
       ) as unknown as InstagramProvider;
       if (!provider) {
-        this._logger.warn('Instagram provider not found, skipping webhook subscription');
-        return;
+        throw new Error('Instagram provider not found');
       }
 
-      await provider.ensureWebhookSubscription(
-        integration.token,
-        integration.internalId
+      const route = await resolveIgRoute(
+        integration as any,
+        this._instagramMessaging
       );
+
+      if (route.source === 'page-access-token') {
+        const pageId = await provider.getPageIdForIgAccount(
+          route.token,
+          integration.internalId,
+          route.host
+        );
+        if (!pageId) {
+          throw new Error('Nao foi possivel identificar a Pagina do Facebook vinculada');
+        }
+        await provider.ensurePageWebhookSubscription(
+          route.token,
+          pageId,
+          route.host
+        );
+      } else {
+        await provider.ensureWebhookSubscription(
+          route.token,
+          integration.internalId,
+          route.host
+        );
+      }
 
       this._logger.log(
         `Webhook subscription ensured for integration ${integrationId}`
       );
+      return true;
     } catch (err) {
-      // Don't block flow activation if webhook subscription fails
-      // The webhook may already be configured manually
+      const reason = err instanceof Error ? err.message : 'Unknown error';
       this._logger.warn(
-        `Webhook subscription failed for integration ${integrationId}: ${
-          err instanceof Error ? err.message : 'Unknown error'
-        }`
+        `Webhook subscription failed for integration ${integrationId}: ${reason}`
       );
+      if (strict) {
+        throw new BadRequestException(
+          'Nao foi possivel ativar os eventos de comentarios da Meta. ' +
+            'Reconecte o canal Instagram para conceder pages_manage_metadata e pages_messaging. ' +
+            `Detalhe: ${reason}`
+        );
+      }
+      return false;
     }
   }
 
@@ -623,6 +660,11 @@ export class FlowsService {
     // simetria com o caminho de criacao (mesmo guard).
     await this.assertIntegrationAccess(orgId, current.integrationId, profileId);
     this.assertDmButtonUrl(body.dmButtonUrl);
+    body = await this.normalizeSpecificMediaIds(
+      orgId,
+      current.integrationId,
+      body
+    );
     await this._flowsRepository.updateFlow(orgId, id, { name: body.name }, profileId);
 
     const triggerType = body.triggerType ?? 'comment_on_post';
@@ -667,6 +709,7 @@ export class FlowsService {
     // promote it to ACTIVE so the user doesn't need to remember to activate
     // it manually. Flows already ACTIVE or PAUSED keep their current status.
     if (current.status === FlowStatus.DRAFT) {
+      await this.ensureWebhookSubscription(orgId, current.integrationId, true);
       await this._flowsRepository.updateFlowStatus(
         orgId,
         id,
@@ -685,6 +728,12 @@ export class FlowsService {
     if (!check.ok) {
       throw new BadRequestException(check.error);
     }
+    await this.ensureWebhookSubscription(orgId, body.integrationId, true);
+    body = await this.normalizeSpecificMediaIds(
+      orgId,
+      body.integrationId,
+      body
+    );
     // Nunca cria flow com profileId null (ficaria invisivel na UI por-perfil):
     // sem profileId -> Default da org; com profileId -> validado. A partir daqui
     // todo o resto do metodo usa o profileId resolvido.
@@ -783,6 +832,48 @@ export class FlowsService {
     await this._flowsRepository.updateFlowStatus(orgId, flow.id, FlowStatus.ACTIVE, profileId);
 
     return this._flowsRepository.getFlow(orgId, flow.id, profileId);
+  }
+
+  private async normalizeSpecificMediaIds(
+    orgId: string,
+    integrationId: string,
+    body: QuickCreateFlowDto
+  ): Promise<QuickCreateFlowDto> {
+    if (body.postMode !== 'specific') return body;
+
+    const resolveIds = async (ids?: string[]): Promise<string[] | undefined> => {
+      if (!ids?.length) return ids;
+      const resolved: string[] = [];
+      for (const id of ids) {
+        const post = await this._postsRepository.getPostById(id, orgId);
+        if (!post) {
+          resolved.push(id);
+          continue;
+        }
+        if (post.integrationId !== integrationId) {
+          throw new BadRequestException(
+            `A publicacao ${id} pertence a outro canal`
+          );
+        }
+        if (
+          post.state !== 'PUBLISHED' ||
+          !post.releaseId ||
+          post.releaseId === 'missing'
+        ) {
+          throw new BadRequestException(
+            `A publicacao ${id} ainda nao possui um ID confirmado pelo Instagram`
+          );
+        }
+        resolved.push(post.releaseId);
+      }
+      return [...new Set(resolved)];
+    };
+
+    return {
+      ...body,
+      postIds: await resolveIds(body.postIds),
+      storyIds: await resolveIds(body.storyIds),
+    };
   }
 
   private buildTriggerConfig(body: QuickCreateFlowDto): Record<string, any> {

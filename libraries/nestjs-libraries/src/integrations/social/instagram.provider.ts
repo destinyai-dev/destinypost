@@ -68,6 +68,8 @@ export class InstagramProvider
     'instagram_manage_comments',
     'instagram_manage_insights',
     'instagram_manage_messages',
+    'pages_manage_metadata',
+    'pages_messaging',
   ];
   override maxConcurrentJob = 400;
   editor = 'normal' as const;
@@ -1266,6 +1268,26 @@ export class InstagramProvider
   ): Promise<boolean> {
     // Instagram webhooks are subscribed directly on the IG account, not the Page.
     return this.subscribeToWebhooks(igAccountId, pageAccessToken, type);
+  }
+
+  async ensurePageWebhookSubscription(
+    pageAccessToken: string,
+    pageId: string,
+    type = 'graph.facebook.com'
+  ): Promise<boolean> {
+    const response = await this.fetch(
+      `https://${type}/v25.0/${pageId}/subscribed_apps?subscribed_fields=feed,messages,messaging_postbacks&access_token=${pageAccessToken}`,
+      { method: 'POST' }
+    );
+    const body = await response.json();
+    if (body.error) {
+      throw new Error(
+        `Page webhook subscription failed: ${
+          body.error.message || JSON.stringify(body.error)
+        }`
+      );
+    }
+    return body.success === true;
   }
 
   async getMediaMetadata(

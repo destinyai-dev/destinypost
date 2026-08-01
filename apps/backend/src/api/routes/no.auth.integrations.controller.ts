@@ -26,6 +26,7 @@ import {
 } from '@gitroom/backend/services/auth/permissions/permission.exception.class';
 import { RefreshIntegrationService } from '@gitroom/nestjs-libraries/integrations/refresh.integration.service';
 import { OrganizationService } from '@gitroom/nestjs-libraries/database/prisma/organizations/organization.service';
+import { FlowsService } from '@gitroom/nestjs-libraries/database/prisma/flows/flows.service';
 
 @ApiTags('Integrations')
 @Controller('/integrations')
@@ -34,7 +35,8 @@ export class NoAuthIntegrationsController {
     private _integrationManager: IntegrationManager,
     private _integrationService: IntegrationService,
     private _refreshIntegrationService: RefreshIntegrationService,
-    private _organizationService: OrganizationService
+    private _organizationService: OrganizationService,
+    private _flowsService: FlowsService
   ) {}
 
   @Get('/')
@@ -364,7 +366,14 @@ export class NoAuthIntegrationsController {
 
     const org = await this._organizationService.getOrgById(organization);
 
-    return this._integrationService.saveProviderPage(org.id, id, body);
+    const result = await this._integrationService.saveProviderPage(
+      org.id,
+      id,
+      body
+    );
+
+    await this._flowsService.ensureIntegrationWebhookSubscription(org.id, id);
+    return result;
   }
 
   @Get('/zernio/callback')
