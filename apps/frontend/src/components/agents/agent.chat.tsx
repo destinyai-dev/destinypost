@@ -30,7 +30,7 @@ import { useVariables } from '@gitroom/react/helpers/variable.context';
 import { useParams } from 'next/navigation';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { sanitizeChatContent } from '@gitroom/helpers/utils/sanitize.chat.content';
-import { TextMessage } from '@copilotkit/runtime-client-gql';
+import { MessageRole, TextMessage } from '@copilotkit/runtime-client-gql';
 import { AddEditModal } from '@gitroom/frontend/components/new-launch/add.edit.modal';
 import dayjs from 'dayjs';
 import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
@@ -275,6 +275,7 @@ const NewInput: FC<InputProps> = (props) => {
   const [media, setMedia] = useState([] as { path: string; id: string }[]);
   const [value, setValue] = useState('');
   const [mediaAnalysisInProgress, setMediaAnalysisInProgress] = useState(false);
+  const { messages, setMessages } = useCopilotMessagesContext();
   const { properties } = useContext(PropertiesContext);
   const fetch = useFetch();
   const toaster = useToaster();
@@ -283,13 +284,31 @@ const NewInput: FC<InputProps> = (props) => {
     !!attachment?.path &&
     !/\.(mp4|mov|webm|m4v)(\?|#|$)/i.test(attachment.path);
 
+  const isDirectOcrRequest = (text: string) =>
+    /(?:o\s*que|oque|qual).{0,35}(?:escrit|texto|diz)|(?:leia|ler|transcrev|ocr).{0,35}(?:imagem|foto|arte)|(?:texto|escrit).{0,35}(?:imagem|foto|arte)/i.test(
+      text.trim()
+    );
+
+  const buildMediaBlock = (attachments: { path: string; id: string }[]) =>
+    attachments.length > 0
+      ? '\n[--Media--]' +
+        attachments
+          .map((item) =>
+            /\.(mp4|mov|webm|m4v)(\?|#|$)/i.test(item.path)
+              ? `Video: ${item.path}`
+              : `Image: ${item.path}`
+          )
+          .join('\n') +
+        '\n[--Media--]'
+      : '';
+
   const buildImageAnalysis = async (
     text: string,
     attachments: { path: string; id: string }[]
-  ) => {
+  ): Promise<{ analysis: string; transcription: string } | null> => {
     const images = attachments.filter(isImageAttachment);
     if (!images.length) {
-      return '';
+      return null;
     }
 
     const response = await fetch('/copilot/vision/analyze', {
@@ -308,11 +327,16 @@ const NewInput: FC<InputProps> = (props) => {
       );
     }
 
-    if (!data?.analysis) {
-      return '';
+    if (!data?.analysis || !data?.transcription) {
+      throw new Error(
+        'A leitura visual nao retornou uma transcricao verificavel.'
+      );
     }
 
-    return `\n\n[--ImageAnalysis--]\nAnalise visual das imagens anexadas, gerada antes da resposta do agente:\n${data.analysis}\n\nUse essa analise como fonte de verdade sobre as imagens anexadas. Nao diga que nao consegue ver a imagem; ela ja foi analisada acima.\n[--ImageAnalysis--]`;
+    return {
+      analysis: data.analysis,
+      transcription: data.transcription,
+    };
   };
 
   const sendMessage = async (
@@ -323,34 +347,46 @@ const NewInput: FC<InputProps> = (props) => {
       return;
     }
 
-    let imageAnalysis = '';
+    let visionResult: { analysis: string; transcription: string } | null = null;
     if (attachments.some(isImageAttachment)) {
       setMediaAnalysisInProgress(true);
       try {
-        imageAnalysis = await buildImageAnalysis(text, attachments);
+        visionResult = await buildImageAnalysis(text, attachments);
       } catch (error) {
         toaster.show((error as Error).message, 'warning');
-        imageAnalysis = `\n\n[--ImageAnalysis--]\nNAO_CONSEGUI_LER_A_IMAGEM\nNao foi possivel analisar automaticamente as imagens anexadas: ${(error as Error).message}\nNao tente ler os links do bloco [--Media--] nem invente o texto da imagem. Explique que a leitura visual automatica falhou e peca uma imagem em maior resolucao ou um modelo de texto com suporte real a visao.\n[--ImageAnalysis--]`;
+        return;
       } finally {
         setMediaAnalysisInProgress(false);
       }
     }
 
+    const mediaBlock = buildMediaBlock(attachments);
+    if (visionResult && isDirectOcrRequest(text)) {
+      setMessages([
+        ...messages,
+        new TextMessage({
+          content: text + mediaBlock,
+          role: MessageRole.User,
+        }),
+        new TextMessage({
+          content: `Na imagem, esta escrito:\n\n${visionResult.transcription}`,
+          role: MessageRole.Assistant,
+        }),
+      ]);
+      setValue('');
+      setMedia([]);
+      return;
+    }
+
+    const imageAnalysis = visionResult
+      ? `\n\n[--ImageAnalysis--]\nAnalise visual das imagens anexadas, gerada antes da resposta do agente:\n${visionResult.analysis}\n\nUse essa analise como fonte de verdade sobre as imagens anexadas. Nao diga que nao consegue ver a imagem; ela ja foi analisada acima.\n[--ImageAnalysis--]`
+      : '';
+
     const send = props.onSend(
       imageAnalysis +
         (imageAnalysis ? '\n\n' : '') +
         text +
-        (attachments.length > 0
-          ? '\n[--Media--]' +
-            attachments
-              .map((item) =>
-                item.path.indexOf('mp4') > -1
-                  ? `Video: ${item.path}`
-                  : `Image: ${item.path}`
-              )
-              .join('\n') +
-            '\n[--Media--]'
-          : '') +
+        mediaBlock +
         `
 ${
   properties.length

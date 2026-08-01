@@ -86,6 +86,8 @@ export class LoadToolsService {
         - If the OCR says a word is illegible or approximate, preserve that uncertainty instead of guessing.
         - If [--ImageAnalysis--] contains NAO_CONSEGUI_LER_A_IMAGEM, tell the user the image could not be read reliably and ask for a higher-resolution image; do not invent an OCR result.
         - [--Media--] blocks are for UI rendering only. Do not try to fetch or read URLs from [--Media--] as a substitute for [--ImageAnalysis--].
+        - When [--ImageAnalysis--] is present, do not call webSearchTool, extractUrlsTool or any search tool to identify the image. The attached-image analysis is the only allowed visual source.
+        - If a user message contains an image in [--Media--] but no [--ImageAnalysis--], do not infer its contents from conversation history. State that visual processing did not complete and ask the user to retry.
         - Never answer "I cannot see the image" when [--ImageAnalysis--] is present. Use the analysis to write copy, captions, ads, hooks, carousel structure or improvement suggestions.
         - If the block says the visual analysis failed, explain that the configured text model must support vision/multimodal input and ask the user to configure a vision-capable model in Settings > AI Models > Text.
 

@@ -164,7 +164,8 @@ describe('CopilotController', () => {
         choices: [
           {
             message: {
-              content: 'Imagem com uma oferta clara para publico empreendedor.',
+              content:
+                'TRANSCRICAO_LITERAL:\n- DestinyPost\n- Tudo em um so lugar.\nPARTES_ILEGIVEIS:\n- nenhuma\nANALISE_MARKETING:\n- Imagem com uma oferta clara para publico empreendedor.',
             },
           },
         ],
@@ -204,6 +205,7 @@ describe('CopilotController', () => {
       );
 
       expect(result.analysis).toContain('oferta clara');
+      expect(result.transcription).toBe('DestinyPost\nTudo em um so lugar.');
       expect(aiClientFactory.buildOpenAiCompatibleClient).toHaveBeenCalledWith(
         'org-1',
         'prof-1'
@@ -237,6 +239,43 @@ describe('CopilotController', () => {
       ).rejects.toMatchObject({
         status: 403,
       });
+    });
+
+    it('deve falhar fechado quando o modelo diz que nao consegue ler a imagem', async () => {
+      const create = jest.fn().mockResolvedValue({
+        choices: [
+          {
+            message: {
+              content:
+                'Nao consigo ler diretamente o texto contido em imagens.',
+            },
+          },
+        ],
+      });
+      aiClientFactory.buildOpenAiCompatibleClient.mockResolvedValue({
+        client: { chat: { completions: { create } } },
+        model: 'modelo-sem-visao',
+      } as any);
+      mediaService.getMediaById.mockResolvedValue({
+        id: 'media-1',
+        organizationId: 'org-1',
+        profileId: 'prof-1',
+        path: 'https://cdn.example.com/image.png',
+        deletedAt: null,
+      } as any);
+      mockedLoadFromUrlOrDataUrl.mockResolvedValue({
+        buffer: Buffer.from('image-bytes'),
+        contentType: 'image/png',
+        extension: 'png',
+      });
+
+      await expect(
+        controller.analyzeAttachedImages(
+          org,
+          { id: 'prof-1' } as Profile,
+          { prompt: 'O que esta escrito?', images: [{ id: 'media-1' }] }
+        )
+      ).rejects.toMatchObject({ status: 412 });
     });
   });
 });

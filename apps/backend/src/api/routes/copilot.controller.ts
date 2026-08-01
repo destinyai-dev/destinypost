@@ -265,6 +265,43 @@ export class CopilotController {
     }
   }
 
+  private parseVisionAnalysis(raw: string): {
+    analysis: string;
+    transcription: string;
+  } {
+    const analysis = (raw || '').trim();
+    const refused =
+      /NAO_CONSEGUI_LER_A_IMAGEM/i.test(analysis) ||
+      /n[aã]o (?:consigo|posso) (?:ler|visualizar|acessar)/i.test(analysis) ||
+      /(?:imagem|url).{0,40}n[aã]o (?:carregou|carrega|est[aá] acess[ií]vel)/i.test(
+        analysis
+      );
+
+    if (!analysis || refused) {
+      throw new HttpException(
+        'O modelo configurado nao conseguiu enxergar a imagem. Selecione um modelo multimodal com suporte real a visao.',
+        412
+      );
+    }
+
+    const transcriptionMatch = analysis.match(
+      /TRANSCRI(?:CAO|ÇÃO)[_ ]LITERAL\s*:\s*([\s\S]*?)(?=\n\s*PARTES[_ ](?:ILEGIVEIS|ILEGÍVEIS)\s*:|\n\s*AN(?:A|Á)LISE[_ ]MARKETING\s*:|$)/i
+    );
+    const transcription = (transcriptionMatch?.[1] || '')
+      .trim()
+      .replace(/^[-*]\s*/gm, '')
+      .trim();
+
+    if (!transcription) {
+      throw new HttpException(
+        'A leitura visual voltou sem uma transcricao verificavel. Tente novamente com a imagem original em maior resolucao.',
+        422
+      );
+    }
+
+    return { analysis, transcription };
+  }
+
   // Limite explicito de 30/min (o global e 30/h) — cada chamada de chat
   // consome a credencial de IA paga do workspace. Paridade com
   // ai-text.controller.ts.
@@ -420,7 +457,7 @@ export class CopilotController {
         path?: string;
       }>;
     }
-  ): Promise<{ analysis: string }> {
+  ): Promise<{ analysis: string; transcription: string }> {
     const images = Array.isArray(body?.images)
       ? body.images.filter((image) => image?.id || image?.path).slice(0, 4)
       : [];
@@ -485,11 +522,16 @@ export class CopilotController {
 
       const analysis =
         response?.choices?.[0]?.message?.content?.trim?.() || '';
-      if (!analysis) {
-        throw new Error('Vision provider returned empty content');
-      }
+      const parsed = this.parseVisionAnalysis(analysis);
 
-      return { analysis };
+      this._logger.log(
+        `OCR visual concluido (model=${model}, images=${loadedImages.length}, bytes=${loadedImages.reduce(
+          (total, image) => total + Buffer.byteLength(image.base64, 'base64'),
+          0
+        )}, transcriptionChars=${parsed.transcription.length})`
+      );
+
+      return parsed;
     } catch (err) {
       const status = err instanceof HttpException ? err.getStatus() : undefined;
       if (status) {
