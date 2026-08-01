@@ -1526,6 +1526,7 @@
   "wizard_step1_title": "Quando alguém faz um comentário",
   "wizard_comment_has": "E esse comentário possui",
   "wizard_specific_post": "uma publicação ou Reels específico",
+  "wizard_select_post_required": "Selecione pelo menos uma publicação ou escolha a opção de qualquer publicação.",
   "wizard_specific_word": "uma palavra ou expressão específica",
   "wizard_keywords_input_placeholder": "Digite uma ou mais palavras",
   "wizard_keywords_comma_hint": "Use vírgulas para separar as palavras",

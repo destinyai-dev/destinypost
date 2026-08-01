@@ -32,6 +32,19 @@ function safeJson(data?: string): Record<string, any> {
   try { return JSON.parse(data); } catch { return {}; }
 }
 
+function normalizePostIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+
+  return Array.from(
+    new Set(
+      value
+        .filter((id): id is string => typeof id === 'string')
+        .map((id) => id.trim())
+        .filter((id) => id.length > 0 && id.length <= 64)
+    )
+  ).slice(0, 100);
+}
+
 const RadioDot: FC<{ active: boolean }> = ({ active }) => (
   <div className={`w-[16px] h-[16px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${active ? 'border-btnPrimary' : 'border-customColor18'}`}>
     {active && <div className="w-[8px] h-[8px] rounded-full bg-btnPrimary" />}
@@ -113,9 +126,9 @@ export const AutomationWizardComponent: FC<Props> = ({ flowId, initialFlow }) =>
     const dmCfg = safeJson(dmNode?.data);
     if (triggerCfg.mode === 'next_publication' && !triggerCfg.postIds?.length) {
       setPostMode('next_publication');
-    } else if (triggerCfg.postIds?.length) {
+    } else if (normalizePostIds(triggerCfg.postIds).length) {
       setPostMode('specific');
-      setSelectedPostIds(triggerCfg.postIds);
+      setSelectedPostIds(normalizePostIds(triggerCfg.postIds));
     } else if (triggerCfg.mode === 'all') {
       setPostMode('all');
     }
@@ -234,9 +247,15 @@ export const AutomationWizardComponent: FC<Props> = ({ flowId, initialFlow }) =>
     return posts.find((p: any) => p.id === selectedPostIds[0]);
   }, [posts, selectedPostIds]);
 
+  const normalizedSelectedPostIds = useMemo(
+    () => normalizePostIds(selectedPostIds),
+    [selectedPostIds]
+  );
+
   const canSave =
     !!name.trim() &&
     !!integrationId &&
+    (postMode !== 'specific' || normalizedSelectedPostIds.length > 0) &&
     ((enableReply && replyMessages.some(m => m.trim())) || dmMessage.trim().length > 0) &&
     (!requireFollow ||
       (openingDmMessage.trim().length > 0 && openingDmButtonText.trim().length > 0));
@@ -251,8 +270,8 @@ export const AutomationWizardComponent: FC<Props> = ({ flowId, initialFlow }) =>
         triggerType: 'comment_on_post',
         postMode,
       };
-      if (postMode === 'specific' && selectedPostIds.length > 0) {
-        body.postIds = selectedPostIds;
+      if (postMode === 'specific') {
+        body.postIds = normalizedSelectedPostIds;
       }
       if (keywordMode === 'specific' && keywords.length > 0) {
         body.keywords = keywords;
@@ -315,7 +334,7 @@ export const AutomationWizardComponent: FC<Props> = ({ flowId, initialFlow }) =>
       setSaving(false);
     }
   }, [
-    canSave, name, integrationId, postMode, selectedPostIds,
+    canSave, name, integrationId, postMode, normalizedSelectedPostIds,
     keywordMode, keywords, matchMode, enableReply, replyMessages,
     enableDm, dmMessage, dmButtonText, dmButtonUrl,
     requireFollow, followGateMessage,
@@ -466,6 +485,14 @@ export const AutomationWizardComponent: FC<Props> = ({ flowId, initialFlow }) =>
                           </button>
                         )}
                       </>
+                    )}
+                    {normalizedSelectedPostIds.length === 0 && (
+                      <p className="text-[11px] text-orange-400 mt-[8px]">
+                        {t(
+                          'wizard_select_post_required',
+                          'Selecione pelo menos uma publicação ou escolha a opção de qualquer publicação.'
+                        )}
+                      </p>
                     )}
                   </div>
                 )}

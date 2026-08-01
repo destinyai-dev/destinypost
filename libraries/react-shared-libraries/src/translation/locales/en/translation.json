@@ -1528,6 +1528,7 @@
   "wizard_step1_title": "When someone comments",
   "wizard_comment_has": "And the comment has",
   "wizard_specific_post": "a specific post or Reel",
+  "wizard_select_post_required": "Select at least one post or choose the any post option.",
   "wizard_specific_word": "a specific word or phrase",
   "wizard_keywords_input_placeholder": "Type one or more words",
   "wizard_keywords_comma_hint": "Use commas to separate words",
