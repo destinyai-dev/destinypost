@@ -48,13 +48,19 @@ pull_private_image() {
 }
 
 wait_for_app() {
-  local attempt container_id status
+  local attempt container_id domain has_healthcheck status
   container_id="$(compose ps -q app)"
   [[ -n "$container_id" ]] || return 1
+  domain="$(env_value DESTINYPOST_DOMAIN)"
+  has_healthcheck="$(docker inspect --format '{{if .Config.Healthcheck}}yes{{else}}no{{end}}' "$container_id" 2>/dev/null || true)"
   for attempt in $(seq 1 60); do
     status="$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container_id" 2>/dev/null || true)"
     [[ "$status" == "healthy" ]] && return 0
     [[ "$status" == "unhealthy" || "$status" == "exited" ]] && return 1
+    if [[ "$has_healthcheck" == "no" && "$status" == "running" ]] &&
+      curl --fail --silent --show-error --max-time 5 "https://${domain}/" >/dev/null 2>&1; then
+      return 0
+    fi
     sleep 5
   done
   return 1
