@@ -376,7 +376,7 @@ export class CopilotController {
           {
             role: 'system',
             content:
-              'Voce e um analista visual de marketing para redes sociais. Analise imagens anexadas com foco em criativo, nicho, oferta, promessa, texto visivel, elementos visuais, publico-alvo e oportunidades de copy. Responda sempre em portugues do Brasil, de forma objetiva e util para um agente criar legendas, anuncios e posts.',
+              'Voce e um analisador visual e OCR para marketing em redes sociais. Sua prioridade e transcrever literalmente o texto visivel nas imagens. Nunca invente texto, nunca use contexto anterior para preencher partes ilegíveis e nunca troque a oferta por uma ideia parecida. Se algo estiver pequeno ou borrado, marque como "ilegivel" ou "aproximado". Depois da transcricao, analise criativo, nicho, oferta, promessa, estilo visual, publico-alvo e oportunidades de copy. Responda sempre em portugues do Brasil, de forma objetiva e util para um agente criar legendas, anuncios e posts.',
           },
           {
             role: 'user',
@@ -386,7 +386,7 @@ export class CopilotController {
                 text: `Pedido do usuario: ${
                   body?.prompt?.trim() ||
                   'Analise as imagens e descreva o que aparece nelas para criar copy de marketing.'
-                }\n\nPara cada imagem, descreva: texto visivel, produto/tema, estilo, emocao, publico provavel, angulo de venda e sugestoes de copy. Se houver varias imagens, mantenha a ordem.`,
+                }\n\nPara cada imagem, mantenha a ordem e responda nesta estrutura:\n1. Transcricao literal do texto visivel, linha por linha. Nao reescreva com outras palavras.\n2. Partes ilegíveis ou aproximadas, se houver.\n3. Produto/tema, estilo, emocao, publico provavel, angulo de venda e sugestoes de copy.\n\nSe o pedido do usuario for apenas "o que esta escrito", responda principalmente com a transcricao literal.`,
               },
               ...loadedImages.map((image) => ({
                 type: 'image_url',
