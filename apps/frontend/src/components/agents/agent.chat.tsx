@@ -248,6 +248,9 @@ const Message: FC<UserMessageProps> = (props) => {
       .replace(/Image: (http.*\n)/g, (match, p1) => {
         return `<img src="${p1.trim()}" class="h-[150px] w-[150px] max-w-full border border-newBgColorInner" />`;
       })
+      .replace(/\[\-\-ImageAnalysis\-\-\][\s\S]*?\[\-\-ImageAnalysis\-\-\]/g, () => {
+        return ``;
+      })
       .replace(/\[\-\-Media\-\-\](.*)\[\-\-Media\-\-\]/g, (match, p1) => {
         return `<div class="flex justify-center mt-[20px]">${p1}</div>`;
       })
@@ -271,13 +274,71 @@ const Message: FC<UserMessageProps> = (props) => {
 const NewInput: FC<InputProps> = (props) => {
   const [media, setMedia] = useState([] as { path: string; id: string }[]);
   const [value, setValue] = useState('');
+  const [mediaAnalysisInProgress, setMediaAnalysisInProgress] = useState(false);
   const { properties } = useContext(PropertiesContext);
-  const sendMessage = (
+  const fetch = useFetch();
+  const toaster = useToaster();
+
+  const isImageAttachment = (attachment: { path: string; id: string }) =>
+    !!attachment?.path &&
+    !/\.(mp4|mov|webm|m4v)(\?|#|$)/i.test(attachment.path);
+
+  const buildImageAnalysis = async (
+    text: string,
+    attachments: { path: string; id: string }[]
+  ) => {
+    const images = attachments.filter(isImageAttachment);
+    if (!images.length) {
+      return '';
+    }
+
+    const response = await fetch('/copilot/vision/analyze', {
+      method: 'POST',
+      body: JSON.stringify({
+        prompt: text,
+        images,
+      }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(
+        data?.message ||
+          'Nao foi possivel analisar a imagem anexada no momento.'
+      );
+    }
+
+    if (!data?.analysis) {
+      return '';
+    }
+
+    return `\n\n[--ImageAnalysis--]\nAnalise visual das imagens anexadas, gerada antes da resposta do agente:\n${data.analysis}\n\nUse essa analise como fonte de verdade sobre as imagens anexadas. Nao diga que nao consegue ver a imagem; ela ja foi analisada acima.\n[--ImageAnalysis--]`;
+  };
+
+  const sendMessage = async (
     text: string,
     attachments: { path: string; id: string }[] = media
   ) => {
+    if (props.inProgress || mediaAnalysisInProgress) {
+      return;
+    }
+
+    let imageAnalysis = '';
+    if (attachments.some(isImageAttachment)) {
+      setMediaAnalysisInProgress(true);
+      try {
+        imageAnalysis = await buildImageAnalysis(text, attachments);
+      } catch (error) {
+        toaster.show((error as Error).message, 'warning');
+        imageAnalysis = `\n\n[--ImageAnalysis--]\nNao foi possivel analisar automaticamente as imagens anexadas: ${(error as Error).message}\n[--ImageAnalysis--]`;
+      } finally {
+        setMediaAnalysisInProgress(false);
+      }
+    }
+
     const send = props.onSend(
       text +
+        imageAnalysis +
         (attachments.length > 0
           ? '\n[--Media--]' +
             attachments
@@ -316,15 +377,17 @@ Use the following social media platforms: ${JSON.stringify(
         value={value}
         media={media}
         setMedia={(e) => setMedia(e.target.value)}
-        carouselDisabled={props.inProgress}
-        onCreateCarousel={() => sendMessage(CAROUSEL_START_MESSAGE, [])}
+        carouselDisabled={props.inProgress || mediaAnalysisInProgress}
+        onCreateCarousel={() => void sendMessage(CAROUSEL_START_MESSAGE, [])}
       />
       <Input
         {...props}
+        inProgress={props.inProgress || mediaAnalysisInProgress}
+        hideStopButton={props.hideStopButton || mediaAnalysisInProgress}
         onChange={setValue}
-        onSend={(text) => sendMessage(text)}
+        onSend={(text) => void sendMessage(text)}
         onInstagramProfile={(username) =>
-          sendMessage(
+          void sendMessage(
             `Mapeie o perfil @${username} do Instagram. Analise os dados publicos, o link da bio e os conteudos recentes; depois abra o DNA da marca e as ideias de conteudo para eu revisar dentro deste chat.`,
             []
           )

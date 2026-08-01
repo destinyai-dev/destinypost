@@ -28,6 +28,9 @@ jest.mock('@ai-sdk/openai', () => ({ createOpenAI: jest.fn() }));
 jest.mock('@openrouter/ai-sdk-provider', () => ({
   createOpenRouter: jest.fn(),
 }));
+jest.mock('@gitroom/nestjs-libraries/upload/storage.helpers', () => ({
+  loadFromUrlOrDataUrl: jest.fn(),
+}));
 
 import { CopilotController } from './copilot.controller';
 import { SubscriptionService } from '@gitroom/nestjs-libraries/database/prisma/subscriptions/subscription.service';
@@ -35,6 +38,8 @@ import { MastraService } from '@gitroom/nestjs-libraries/chat/mastra.service';
 import { ProfileService } from '@gitroom/nestjs-libraries/database/prisma/profiles/profile.service';
 import { AiClientFactory } from '@gitroom/nestjs-libraries/ai/ai-client.factory';
 import { InstagramStrategyService } from '@gitroom/nestjs-libraries/ai/instagram-strategy.service';
+import { MediaService } from '@gitroom/nestjs-libraries/database/prisma/media/media.service';
+import { loadFromUrlOrDataUrl } from '@gitroom/nestjs-libraries/upload/storage.helpers';
 import { createMock } from '@gitroom/nestjs-libraries/test';
 import { MockProxy } from 'jest-mock-extended';
 import { HttpException } from '@nestjs/common';
@@ -48,6 +53,8 @@ describe('CopilotController', () => {
   let aiClientFactory: MockProxy<AiClientFactory> & AiClientFactory;
   let instagramStrategyService: MockProxy<InstagramStrategyService> &
     InstagramStrategyService;
+  let mediaService: MockProxy<MediaService> & MediaService;
+  const mockedLoadFromUrlOrDataUrl = loadFromUrlOrDataUrl as jest.Mock;
 
   const org = { id: 'org-1' } as Organization;
 
@@ -59,17 +66,20 @@ describe('CopilotController', () => {
   };
 
   beforeEach(() => {
+    mockedLoadFromUrlOrDataUrl.mockReset();
     subscriptionService = createMock<SubscriptionService>();
     mastraService = createMock<MastraService>();
     profileService = createMock<ProfileService>();
     aiClientFactory = createMock<AiClientFactory>();
     instagramStrategyService = createMock<InstagramStrategyService>();
+    mediaService = createMock<MediaService>();
     controller = new CopilotController(
       subscriptionService,
       mastraService,
       profileService,
       aiClientFactory,
-      instagramStrategyService
+      instagramStrategyService,
+      mediaService
     );
   });
 
@@ -145,6 +155,88 @@ describe('CopilotController', () => {
       await controller.agent(req, res, org, null);
 
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+  });
+
+  describe('analyzeAttachedImages (/copilot/vision/analyze)', () => {
+    it('deve analisar uma imagem da biblioteca usando o modelo de texto configurado', async () => {
+      const create = jest.fn().mockResolvedValue({
+        choices: [
+          {
+            message: {
+              content: 'Imagem com uma oferta clara para publico empreendedor.',
+            },
+          },
+        ],
+      });
+      aiClientFactory.buildOpenAiCompatibleClient.mockResolvedValue({
+        client: {
+          chat: {
+            completions: {
+              create,
+            },
+          },
+        },
+        model: 'gpt-4o',
+      } as any);
+      mediaService.getMediaById.mockResolvedValue({
+        id: 'media-1',
+        organizationId: 'org-1',
+        profileId: 'prof-1',
+        path: 'https://cdn.example.com/image.png',
+        name: 'image.png',
+        originalName: 'criativo.png',
+        deletedAt: null,
+      } as any);
+      mockedLoadFromUrlOrDataUrl.mockResolvedValue({
+        buffer: Buffer.from('image-bytes'),
+        contentType: 'image/png',
+        extension: 'png',
+      });
+
+      const result = await controller.analyzeAttachedImages(
+        org,
+        { id: 'prof-1' } as Profile,
+        {
+          prompt: 'Crie uma copy para anuncio',
+          images: [{ id: 'media-1' }],
+        }
+      );
+
+      expect(result.analysis).toContain('oferta clara');
+      expect(aiClientFactory.buildOpenAiCompatibleClient).toHaveBeenCalledWith(
+        'org-1',
+        'prof-1'
+      );
+      expect(mediaService.getMediaById).toHaveBeenCalledWith('media-1');
+      expect(create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          model: 'gpt-4o',
+          messages: expect.any(Array),
+        })
+      );
+    });
+
+    it('deve bloquear imagem de outro perfil', async () => {
+      aiClientFactory.buildOpenAiCompatibleClient.mockResolvedValue({
+        client: { chat: { completions: { create: jest.fn() } } },
+        model: 'gpt-4o',
+      } as any);
+      mediaService.getMediaById.mockResolvedValue({
+        id: 'media-1',
+        organizationId: 'org-1',
+        profileId: 'prof-2',
+        path: 'https://cdn.example.com/image.png',
+        deletedAt: null,
+      } as any);
+
+      await expect(
+        controller.analyzeAttachedImages(org, { id: 'prof-1' } as Profile, {
+          images: [{ id: 'media-1' }],
+        })
+      ).rejects.toMatchObject({
+        status: 403,
+      });
     });
   });
 });

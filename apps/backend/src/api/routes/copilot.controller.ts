@@ -34,6 +34,8 @@ import {
 } from '@gitroom/backend/services/auth/permissions/permission.exception.class';
 import { InstagramStrategyService } from '@gitroom/nestjs-libraries/ai/instagram-strategy.service';
 import { InstagramBrandDna } from '@gitroom/nestjs-libraries/ai/ai-text.service';
+import { MediaService } from '@gitroom/nestjs-libraries/database/prisma/media/media.service';
+import { loadFromUrlOrDataUrl } from '@gitroom/nestjs-libraries/upload/storage.helpers';
 
 export type ChannelsContext = {
   integrations: string;
@@ -45,12 +47,15 @@ export type ChannelsContext = {
 
 @Controller('/copilot')
 export class CopilotController {
+  private readonly _logger = new Logger(CopilotController.name);
+
   constructor(
     private _subscriptionService: SubscriptionService,
     private _mastraService: MastraService,
     private _profileService: ProfileService,
     private _aiClientFactory: AiClientFactory,
-    private _instagramStrategyService: InstagramStrategyService
+    private _instagramStrategyService: InstagramStrategyService,
+    private _mediaService: MediaService
   ) {}
 
   /**
@@ -91,6 +96,91 @@ export class CopilotController {
       `Copilot: falha ao resolver credencial de IA (status ${status})`
     );
     return res.status(status).json({ message });
+  }
+
+  private normalizeVisionPath(path: string): string {
+    if (!path) {
+      throw new HttpException('Imagem invalida.', 400);
+    }
+
+    if (path.startsWith('data:')) {
+      return path;
+    }
+
+    if (/^https:\/\//i.test(path)) {
+      return path;
+    }
+
+    if (path.startsWith('/')) {
+      const base = (process.env.FRONTEND_URL || '').replace(/\/$/, '');
+      if (!base) {
+        throw new HttpException(
+          'FRONTEND_URL nao configurada para analisar imagens locais.',
+          500
+        );
+      }
+      return `${base}${path}`;
+    }
+
+    throw new HttpException('A imagem precisa ser uma URL HTTPS publica.', 400);
+  }
+
+  private async resolveVisionImage(
+    organizationId: string,
+    profileId: string | undefined,
+    input: { id?: string; path?: string }
+  ): Promise<{ path: string; label: string }> {
+    if (input?.id) {
+      const media = await this._mediaService.getMediaById(input.id);
+      if (
+        !media ||
+        (media as any).organizationId !== organizationId ||
+        (media as any).deletedAt
+      ) {
+        throw new HttpException('Imagem nao encontrada.', 404);
+      }
+
+      if (
+        profileId &&
+        (media as any).profileId &&
+        (media as any).profileId !== profileId
+      ) {
+        throw new HttpException('Imagem nao pertence a este perfil.', 403);
+      }
+
+      return {
+        path: this.normalizeVisionPath((media as any).path),
+        label: (media as any).originalName || (media as any).name || input.id,
+      };
+    }
+
+    return {
+      path: this.normalizeVisionPath(input?.path || ''),
+      label: input?.path || 'imagem',
+    };
+  }
+
+  private async loadVisionImageData(path: string): Promise<{
+    contentType: string;
+    base64: string;
+  }> {
+    const image = await loadFromUrlOrDataUrl(path);
+    if (!image.contentType.toLowerCase().startsWith('image/')) {
+      throw new HttpException('O arquivo anexado nao e uma imagem.', 400);
+    }
+
+    // Evita mandar anexos enormes para o provedor de IA e estourar timeout.
+    if (image.buffer.byteLength > 8 * 1024 * 1024) {
+      throw new HttpException(
+        'A imagem e muito grande para analise. Use uma imagem de ate 8 MB.',
+        400
+      );
+    }
+
+    return {
+      contentType: image.contentType,
+      base64: image.buffer.toString('base64'),
+    };
   }
 
   // Limite explicito de 30/min (o global e 30/h) — cada chamada de chat
@@ -232,6 +322,105 @@ export class CopilotController {
       body?.username,
       body?.integrationId
     );
+  }
+
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @Post('/vision/analyze')
+  @CheckPolicies([AuthorizationActions.Create, Sections.AI])
+  async analyzeAttachedImages(
+    @GetOrgFromRequest() organization: Organization,
+    @GetProfileFromRequest() profile: Profile | null,
+    @Body()
+    body: {
+      prompt?: string;
+      images?: Array<{
+        id?: string;
+        path?: string;
+      }>;
+    }
+  ): Promise<{ analysis: string }> {
+    const images = Array.isArray(body?.images)
+      ? body.images.filter((image) => image?.id || image?.path).slice(0, 4)
+      : [];
+
+    if (!images.length) {
+      throw new HttpException('Envie pelo menos uma imagem para analisar.', 400);
+    }
+
+    const { client, model } =
+      await this._aiClientFactory.buildOpenAiCompatibleClient(
+        organization.id,
+        profile?.id
+      );
+
+    try {
+      const loadedImages = await Promise.all(
+        images.map(async (image, index) => {
+          const resolved = await this.resolveVisionImage(
+            organization.id,
+            profile?.id,
+            image
+          );
+          const data = await this.loadVisionImageData(resolved.path);
+          return {
+            label: resolved.label,
+            index: index + 1,
+            ...data,
+          };
+        })
+      );
+
+      const response = await client.chat.completions.create({
+        model,
+        messages: [
+          {
+            role: 'system',
+            content:
+              'Voce e um analista visual de marketing para redes sociais. Analise imagens anexadas com foco em criativo, nicho, oferta, promessa, texto visivel, elementos visuais, publico-alvo e oportunidades de copy. Responda sempre em portugues do Brasil, de forma objetiva e util para um agente criar legendas, anuncios e posts.',
+          },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: `Pedido do usuario: ${
+                  body?.prompt?.trim() ||
+                  'Analise as imagens e descreva o que aparece nelas para criar copy de marketing.'
+                }\n\nPara cada imagem, descreva: texto visivel, produto/tema, estilo, emocao, publico provavel, angulo de venda e sugestoes de copy. Se houver varias imagens, mantenha a ordem.`,
+              },
+              ...loadedImages.map((image) => ({
+                type: 'image_url',
+                image_url: {
+                  url: `data:${image.contentType};base64,${image.base64}`,
+                },
+              })),
+            ],
+          },
+        ],
+      });
+
+      const analysis =
+        response?.choices?.[0]?.message?.content?.trim?.() || '';
+      if (!analysis) {
+        throw new Error('Vision provider returned empty content');
+      }
+
+      return { analysis };
+    } catch (err) {
+      const status = err instanceof HttpException ? err.getStatus() : undefined;
+      if (status) {
+        throw err;
+      }
+
+      this._logger.warn(
+        `Falha ao analisar imagem no agente: ${(err as Error).message}`
+      );
+
+      throw new HttpException(
+        'O modelo de texto configurado nao conseguiu analisar a imagem. Configure um modelo com visao, como GPT-4o/GPT-5, Gemini com visao ou outro modelo OpenAI-compativel multimodal.',
+        412
+      );
+    }
   }
 
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
